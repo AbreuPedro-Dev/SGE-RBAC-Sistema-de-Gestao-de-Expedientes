@@ -37,7 +37,7 @@ function checkPermission(requiredPermission) {
       return res.status(401).json({ success: false, message: 'Não autenticado.' });
     }
 
-    // Admin has access to all actions
+    // Administrador tem acesso a todas as ações
     if (req.user.role_code === 'admin') {
       return next();
     }
@@ -46,7 +46,7 @@ function checkPermission(requiredPermission) {
       return next();
     }
 
-    // Audit unauthorized attempt
+    // Registar tentativa não autorizada nos logs de auditoria
     db.addAuditLog({
       user_id: req.user.id,
       user_name: req.user.name,

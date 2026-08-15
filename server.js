@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Helper for client IP
+// Auxiliar para obter o IP do cliente
 const getClientIp = (req) => req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
 
 // ==========================================
@@ -218,7 +218,7 @@ app.get('/api/expedientes/:id', authenticateToken, checkPermission('expediente:r
     return res.status(404).json({ success: false, message: 'Expediente não encontrado.' });
   }
 
-  // Check confidentiality
+  // Verificar permissão de acesso a expedientes confidenciais
   if (expedient.confidentiality === 'Confidencial' &&
       req.user.role_code !== 'admin' &&
       req.user.role_code !== 'gestor' &&
@@ -396,12 +396,12 @@ app.post('/api/reset-demo', authenticateToken, (req, res) => {
   res.json({ success: true, message: 'Dados de demonstração reinicializados com sucesso!' });
 });
 
-// Fallback to SPA index.html
+// Redirecionamento padrão para o index.html da SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start Server
+// Iniciar o Servidor HTTP Express
 app.listen(PORT, () => {
   console.log(`====================================================`);
   console.log(`  SGE-RBAC - Sistema de Gestão de Expedientes  `);

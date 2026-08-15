@@ -4,13 +4,13 @@ const bcrypt = require('bcryptjs');
 
 const DB_PATH = path.join(__dirname, '../../data/database.json');
 
-// Ensure data directory exists
+// Garantir que o diretório de dados existe
 const dataDir = path.join(__dirname, '../../data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Initial Seeds
+// Dados Iniciais de Demonstração (Seeds)
 function getInitialData() {
   const passwordHashAdmin = bcrypt.hashSync('Admin123!', 10);
   const passwordHashGestor = bcrypt.hashSync('Gestor123!', 10);
@@ -61,7 +61,7 @@ function getInitialData() {
       { id: 10, code: 'reports:export', name: 'Exportar Relatórios', category: 'Relatórios' }
     ],
     role_permissions: [
-      // Admin -> All permissions
+      // Administrador -> Acesso a todas as permissões
       { role_id: 1, permission_id: 1 },
       { role_id: 1, permission_id: 2 },
       { role_id: 1, permission_id: 3 },
@@ -72,7 +72,7 @@ function getInitialData() {
       { role_id: 1, permission_id: 8 },
       { role_id: 1, permission_id: 9 },
       { role_id: 1, permission_id: 10 },
-      // Gestor -> Expedientes complete, reports, audit, confidential
+      // Gestor -> Gestão completa de expedientes, relatórios, auditoria e confidenciais
       { role_id: 2, permission_id: 3 },
       { role_id: 2, permission_id: 4 },
       { role_id: 2, permission_id: 5 },
@@ -81,11 +81,11 @@ function getInitialData() {
       { role_id: 2, permission_id: 8 },
       { role_id: 2, permission_id: 9 },
       { role_id: 2, permission_id: 10 },
-      // Técnico -> Read, Tramitar, Create
+      // Técnico -> Leitura, Tramitação e Criação
       { role_id: 3, permission_id: 4 },
       { role_id: 3, permission_id: 5 },
       { role_id: 3, permission_id: 6 },
-      // Leitor -> Read public only
+      // Leitor -> Leitura apenas de processos públicos
       { role_id: 4, permission_id: 5 }
     ],
     users: [
@@ -446,7 +446,7 @@ class Database {
     fs.writeFileSync(DB_PATH, JSON.stringify(this.data, null, 2), 'utf8');
   }
 
-  // Users
+  // Gestão de Utilizadores
   getUsers() {
     return this.data.users.map(u => {
       const userWithoutPass = { ...u };
@@ -503,7 +503,7 @@ class Database {
     return this.getUserById(Number(id));
   }
 
-  // Roles & Permissions
+  // Perfis e Permissões (RBAC)
   getRoles() {
     return this.data.roles.map(role => {
       const rolePerms = this.data.role_permissions
@@ -527,7 +527,7 @@ class Database {
 
   updateRolePermissions(role_id, permission_ids) {
     const roleId = Number(role_id);
-    // Filter out existing
+    // Filtrar registos existentes
     this.data.role_permissions = this.data.role_permissions.filter(rp => rp.role_id !== roleId);
     permission_ids.forEach(pId => {
       this.data.role_permissions.push({ role_id: roleId, permission_id: Number(pId) });
@@ -536,7 +536,7 @@ class Database {
     return this.getRoles().find(r => r.id === roleId);
   }
 
-  // Expedientes
+  // Gestão de Expedientes
   getExpedientes(userRoleCode, userPerms = []) {
     if (!this.data.expedientes || !Array.isArray(this.data.expedientes) || this.data.expedientes.length === 0) {
       const initial = getInitialData();
@@ -548,7 +548,7 @@ class Database {
 
     let list = [...this.data.expedientes];
 
-    // Filter confidentiality if user lacks permission
+    // Filtrar processos confidenciais se o utilizador não tiver permissão
     const canViewConfidential = userPerms.includes('expediente:read_confidential') || userRoleCode === 'admin' || userRoleCode === 'gestor';
     if (!canViewConfidential) {
       list = list.filter(exp => exp.confidentiality !== 'Confidencial');
@@ -668,7 +668,7 @@ class Database {
     return this.data.expedientes[expIndex];
   }
 
-  // Audit Logs
+  // Registos de Auditoria
   addAuditLog({ user_id, user_name, user_role, action, entity, entity_id, details, ip_address = '127.0.0.1', success = true }) {
     const id = this.data.audit_logs.length ? Math.max(...this.data.audit_logs.map(a => a.id)) + 1 : 1;
     const log = {
@@ -715,7 +715,7 @@ class Database {
     return this.data;
   }
 
-  // Stats for Dashboard
+  // Métricas Estatísticas para o Dashboard
   getDashboardStats() {
     const totalExpedientes = this.data.expedientes.length;
     const emTramitacao = this.data.expedientes.filter(e => e.status === 'Em Tramitação' || e.status === 'Entrada').length;
@@ -727,7 +727,7 @@ class Database {
     const totalUsers = this.data.users.length;
     const activeUsers = this.data.users.filter(u => u.active).length;
 
-    // Expedientes by status
+    // Gestão de Expedientes by status
     const byStatus = {
       'Entrada': this.data.expedientes.filter(e => e.status === 'Entrada').length,
       'Em Tramitação': this.data.expedientes.filter(e => e.status === 'Em Tramitação').length,
@@ -736,7 +736,7 @@ class Database {
       'Arquivado': arquivados
     };
 
-    // Expedientes by priority
+    // Gestão de Expedientes by priority
     const byPriority = {
       'Baixa': this.data.expedientes.filter(e => e.priority === 'Baixa').length,
       'Média': this.data.expedientes.filter(e => e.priority === 'Média').length,
