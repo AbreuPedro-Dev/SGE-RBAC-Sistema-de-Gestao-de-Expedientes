@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const API_BASE = (window.location.protocol === 'file:' || !window.location.port) ? 'http://localhost:3000' : '';
 
 // Auxiliar: Preenchimento Rápido de Demonstração (Preenche credenciais na tela de login)
-window.fillDemo = function(email, password) {
+window.fillDemo = function (email, password) {
   const emailInput = document.getElementById('login-email');
   const passwordInput = document.getElementById('login-password');
   if (emailInput) emailInput.value = email;
@@ -43,7 +43,7 @@ function initTheme() {
   updateThemeIcon(saved);
 }
 
-window.toggleTheme = function() {
+window.toggleTheme = function () {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';
   const next = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
@@ -132,7 +132,7 @@ async function fetchProfile() {
   }
 }
 
-window.logout = function() {
+window.logout = function () {
   currentToken = null;
   currentUser = null;
   localStorage.removeItem('sge_token');
@@ -161,7 +161,7 @@ function showAppLayout() {
   }
   const roleBadge = document.getElementById('user-role-display');
   roleBadge.innerText = currentUser.role_name;
-  
+
   if (currentUser.role_code === 'admin') roleBadge.style.background = '#ef4444';
   else if (currentUser.role_code === 'gestor') roleBadge.style.background = '#f59e0b';
   else if (currentUser.role_code === 'tecnico') roleBadge.style.background = '#0f766e';
@@ -185,7 +185,7 @@ function showAppLayout() {
 }
 
 // Auxiliar de Alternância do Menu Lateral em Dispositivos Móveis
-window.toggleMobileSidebar = function() {
+window.toggleMobileSidebar = function () {
   const sidebar = document.getElementById('main-sidebar');
   const overlay = document.getElementById('sidebar-overlay');
   if (sidebar && overlay) {
@@ -195,7 +195,7 @@ window.toggleMobileSidebar = function() {
 };
 
 // Navegação e Alternância de Abas
-window.switchTab = function(tabName) {
+window.switchTab = function (tabName) {
   // Fechar o menu lateral móvel se estiver aberto
   const sidebar = document.getElementById('main-sidebar');
   const overlay = document.getElementById('sidebar-overlay');
@@ -244,7 +244,7 @@ async function loadDashboardData() {
     document.getElementById('kpi-deferidos').innerText = stats.deferidos;
     document.getElementById('kpi-urgentes').innerText = stats.urgentes;
 
-    // Exibir banner de restauro se o utilizador for administrador
+    // Exibir banner de restauro se o utilizador for administrador, onde se faz 
     const banner = document.getElementById('banner-reset-demo');
     if (banner) {
       const isAdmin = currentUser && currentUser.role_code === 'admin';
@@ -257,7 +257,7 @@ async function loadDashboardData() {
   }
 }
 
-window.resetDemoData = async function() {
+window.resetDemoData = async function () {
   if (!confirm('Tem a certeza de que deseja restaurar todos os dados demonstrativos? Esta ação repõe utilizadores, expedientes, tramitações, despachos e logs de auditoria nos valores iniciais.')) {
     return;
   }
@@ -378,7 +378,7 @@ function renderExpedientesTable(list) {
 
   list.forEach(exp => {
     const tr = document.createElement('tr');
-    
+
     // Classe do Emblema de Estado
     let statusClass = 'badge-entrada';
     if (exp.status === 'Em Tramitação') statusClass = 'badge-tramitacao';
@@ -433,7 +433,7 @@ function renderExpedientesTable(list) {
   });
 }
 
-window.filterExpedientes = function() {
+window.filterExpedientes = function () {
   const searchInput = document.getElementById('search-expedientes');
   const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
   const statusSelect = document.getElementById('filter-status');
@@ -457,7 +457,7 @@ window.filterExpedientes = function() {
 };
 
 // Modal de Detalhes do Expediente e Linha do Tempo
-window.viewExpedientDetails = async function(id) {
+window.viewExpedientDetails = async function (id) {
   try {
     const data = await apiFetch(`/api/expedientes/${id}`);
     const exp = data.expedient;
@@ -550,7 +550,7 @@ window.viewExpedientDetails = async function(id) {
 };
 
 // Ações do Expediente (Tramitar, Despachar, Arquivar)
-window.openNewExpedientModal = function() {
+window.openNewExpedientModal = function () {
   document.getElementById('form-new-exp').reset();
   openModal('modal-new-exp');
 };
@@ -579,7 +579,7 @@ async function handleCreateExpedient(e) {
   }
 }
 
-window.openTramitarModal = function(id) {
+window.openTramitarModal = function (id) {
   document.getElementById('tramitar-exp-id').value = id;
   document.getElementById('form-tramitar').reset();
   openModal('modal-tramitar');
@@ -606,7 +606,7 @@ async function handleTramitarSubmit(e) {
   }
 }
 
-window.openDespachoModal = function(id) {
+window.openDespachoModal = function (id) {
   document.getElementById('despacho-exp-id').value = id;
   document.getElementById('form-despacho').reset();
   openModal('modal-despacho');
@@ -633,7 +633,7 @@ async function handleDespachoSubmit(e) {
   }
 }
 
-window.openArquivarModal = function(id) {
+window.openArquivarModal = function (id) {
   document.getElementById('arquivar-exp-id').value = id;
   document.getElementById('form-arquivar').reset();
   openModal('modal-arquivar');
@@ -700,14 +700,14 @@ function escapeHtml(str) {
   return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
-window.openUserModal = function() {
+window.openUserModal = function () {
   document.getElementById('modal-user-title').innerText = 'Adicionar Novo Utilizador';
   document.getElementById('user-id').value = '';
   document.getElementById('form-user').reset();
   openModal('modal-user');
 };
 
-window.editUser = function(id, name, email, roleId, department) {
+window.editUser = function (id, name, email, roleId, department) {
   document.getElementById('modal-user-title').innerText = 'Editar Utilizador';
   document.getElementById('user-id').value = id;
   document.getElementById('user-name').value = name;
@@ -810,7 +810,7 @@ function renderRbacMatrix(roles, permissions) {
   container.innerHTML = html;
 }
 
-window.toggleRbacPermission = async function(roleId, permissionId, isChecked) {
+window.toggleRbacPermission = async function (roleId, permissionId, isChecked) {
   try {
     const data = await apiFetch('/api/roles');
     const role = data.roles.find(r => r.id === roleId);
@@ -873,18 +873,18 @@ function renderAuditTable(logs) {
   });
 }
 
-window.filterAuditLogs = function() {
+window.filterAuditLogs = function () {
   const query = document.getElementById('search-audit').value.toLowerCase();
   const filtered = cachedAuditLogs.filter(l => {
     return l.user_name.toLowerCase().includes(query) ||
-           l.action.toLowerCase().includes(query) ||
-           l.details.toLowerCase().includes(query) ||
-           l.entity.toLowerCase().includes(query);
+      l.action.toLowerCase().includes(query) ||
+      l.details.toLowerCase().includes(query) ||
+      l.entity.toLowerCase().includes(query);
   });
   renderAuditTable(filtered);
 };
 
-window.exportAuditCSV = function() {
+window.exportAuditCSV = function () {
   if (!cachedAuditLogs.length) {
     showToast('Sem dados para exportar.', 'error');
     return;
@@ -909,14 +909,14 @@ window.exportAuditCSV = function() {
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement('a');
   link.setAttribute('href', encodedUri);
-  link.setAttribute('download', `SGE_Auditoria_${new Date().toISOString().slice(0,10)}.csv`);
+  link.setAttribute('download', `SGE_Auditoria_${new Date().toISOString().slice(0, 10)}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   showToast('Ficheiro CSV gerado com sucesso!', 'success');
 };
 
-window.clearAuditLogsUI = async function() {
+window.clearAuditLogsUI = async function () {
   if (!confirm('Tem a certeza de que deseja eliminar todos os registos de auditoria? Esta ação não pode ser desfeita.')) {
     return;
   }
@@ -938,6 +938,6 @@ function openModal(id) {
   document.getElementById(id).classList.add('active');
 }
 
-window.closeModal = function(id) {
+window.closeModal = function (id) {
   document.getElementById(id).classList.remove('active');
 };
