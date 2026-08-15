@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SGE-RBAC — Sistema de Gestão de Expedientes com Controle de Acesso Baseado em Papéis e Auditoria Imutável">
+  <title>SGE-RBAC | Sistema de Gestão de Expedientes</title>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+  
+  <!-- Relative CSS Link -->
+  <link rel="stylesheet" href="./css/style.css">
+
+  <!-- Fallback CSS Critical Structural Rules -->
+  <style>
+    .modal-overlay {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+      z-index: 10000 !important;
+      background: rgba(14, 56, 53, 0.75) !important;
+      display: flex !important; align-items: center !important; justify-content: center !important;
+      opacity: 0 !important; visibility: hidden !important; pointer-events: none !important;
+    }
+    .modal-overlay.active {
+      opacity: 1 !important; visibility: visible !important; pointer-events: auto !important;
+    }
+  </style>
+
+  <!-- Chart.js for Dashboard -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Sidebar Overlay for Mobile -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+
+  <!-- ========================================== -->
+  <!-- 1. TELA DE LOGIN (SPLIT SCREEN PANELS)     -->
+  <!-- ========================================== -->
+  <div id="login-screen">
+    <div class="login-wrapper">
+      
+      <!-- Left Panel: Branding & Credentials Info -->
+      <div class="login-brand-panel">
+        <div>
+          <div class="brand-header-title">
+            Gestão de Expedientes
+          </div>
+          <div class="brand-header-desc">
+            Aplicação com controle de acesso baseado em papéis (RBAC) para gestão de processos, pareceres técnicos e auditoria.
+          </div>
+
+          <div class="brand-demo-box">
+            <div style="font-weight: 700; color: #ffffff; margin-bottom: 0.4rem;">
+              <i class="ri-key-2-line"></i> Contas de Demonstração:
+            </div>
+            admin@sge.gov.mz / Admin123!<br>
+            gestor@sge.gov.mz / Gestor123!<br>
+            tecnico@sge.gov.mz / Tecnico123!<br>
+            leitor@sge.gov.mz / Leitor123!
+          </div>
+        </div>
+
+        <div class="brand-tech-footer">
+          <strong>Tecnologias:</strong> Node.js, Express, SQLite3, RBAC, JWT, HTML5/CSS3.
+        </div>
+      </div>
+
+      <!-- Right Panel: Login Form & Quick Select -->
+      <div class="login-form-panel">
+        <h2 class="login-title">Iniciar Sessão</h2>
+        <p class="login-subtitle">Introduza as credenciais para aceder ao sistema.</p>
+
+        <form id="login-form">
+          <div class="form-group">
+            <label for="login-email"><i class="ri-mail-line"></i> E-mail / Utilizador</label>
+            <div class="input-with-icon">
+              <i class="ri-mail-send-line"></i>
+              <input type="email" id="login-email" class="form-control" placeholder="nome@sge.gov.mz" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="login-password"><i class="ri-lock-2-line"></i> Palavra-passe</label>
+            <div class="input-with-icon">
+              <i class="ri-key-2-line"></i>
+              <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">
+              <i class="ri-login-box-line"></i> Entrar
+            </button>
+          </div>
+        </form>
+
+        <!-- Selector de Contas Demo -->
+        <div class="demo-accounts">
+          <div class="demo-title">
+            <i class="ri-flash-line" style="color: var(--warning);"></i> Seleção Rápida de Perfil Demo
+          </div>
+          <div class="demo-grid">
+            <button type="button" class="btn-demo" onclick="fillDemo('admin@sge.gov.mz', 'Admin123!')">
+              <span class="role-tag" style="color: var(--danger);"><i class="ri-user-star-line"></i> Administrador</span>
+              <span class="email-tag">admin@sge.gov.mz</span>
+            </button>
+            <button type="button" class="btn-demo" onclick="fillDemo('gestor@sge.gov.mz', 'Gestor123!')">
+              <span class="role-tag" style="color: var(--warning);"><i class="ri-briefcase-4-line"></i> Chefe / Gestor</span>
+              <span class="email-tag">gestor@sge.gov.mz</span>
+            </button>
+            <button type="button" class="btn-demo" onclick="fillDemo('tecnico@sge.gov.mz', 'Tecnico123!')">
+              <span class="role-tag" style="color: var(--primary);"><i class="ri-user-follow-line"></i> Técnico Tramitador</span>
+              <span class="email-tag">tecnico@sge.gov.mz</span>
+            </button>
+            <button type="button" class="btn-demo" onclick="fillDemo('leitor@sge.gov.mz', 'Leitor123!')">
+              <span class="role-tag" style="color: var(--success);"><i class="ri-eye-line"></i> Consultor / Leitor</span>
+              <span class="email-tag">leitor@sge.gov.mz</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. LAYOUT PRINCIPAL DA APLICAÇÃO           -->
+  <!-- ========================================== -->
+  <div id="app-layout" style="display: none;">
+
+    <!-- Sidebar Navigation (Petrol Teal) -->
+    <aside class="sidebar" id="main-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo-icon">
+          <i class="ri-folder-shield-2-line"></i>
+        </div>
+        <span class="sidebar-title">SGE-RBAC</span>
+      </div>
+
+      <div class="sidebar-category-label">Módulos</div>
+
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a class="nav-link active" onclick="switchTab('dashboard')">
+            <i class="ri-dashboard-3-line"></i> Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" onclick="switchTab('expedientes')">
+            <i class="ri-file-list-3-line"></i> Expedientes
+          </a>
+        </li>
+        <li class="nav-item" id="nav-users">
+          <a class="nav-link" onclick="switchTab('users')">
+            <i class="ri-user-settings-line"></i> Utilizadores e Perfis
+          </a>
+        </li>
+        <li class="nav-item" id="nav-rbac">
+          <a class="nav-link" onclick="switchTab('rbac')">
+            <i class="ri-shield-keyhole-line"></i> Matriz RBAC
+          </a>
+        </li>
+        <li class="nav-item" id="nav-audit">
+          <a class="nav-link" onclick="switchTab('audit')">
+            <i class="ri-history-line"></i> Auditoria e Pesquisa
+          </a>
+        </li>
+      </ul>
+
+      <!-- User Profile Card -->
+      <div class="sidebar-user">
+        <div class="avatar" id="user-avatar">
+          A
+          <span class="avatar-status-dot"></span>
+        </div>
+        <div class="user-info">
+          <div class="user-name" id="user-name-display">Carregando...</div>
+          <div class="user-role-badge" id="user-role-display" style="background: var(--primary);">Perfil</div>
+        </div>
+        <button class="btn-logout" onclick="logout()" title="Encerrar Sessão" aria-label="Sair">
+          <i class="ri-logout-box-r-line"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <main class="main-wrapper">
+      
+      <!-- Top Navbar (Clean Academic Banner) -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-mobile-toggle" onclick="toggleMobileSidebar()" title="Abrir Menu">
+            <i class="ri-menu-2-line"></i>
+          </button>
+          <div>
+            <div class="header-welcome-title" id="welcome-user-title">Bem-vindo, Administrador do Sistema</div>
+            <div class="header-welcome-subtitle" id="welcome-user-role">Perfil activo: ADMIN</div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="theme-toggle" onclick="toggleTheme()" title="Alternar Tema Claro/Escuro" aria-label="Tema">
+            <i class="ri-sun-line" id="theme-icon"></i>
+          </button>
+          <button class="btn btn-primary btn-sm" id="btn-header-new-exp" onclick="openNewExpedientModal()" style="display: none;">
+            <i class="ri-add-circle-line"></i> Novo Expediente
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Body -->
+      <div class="content-body">
+
+        <!-- VIEW 1: DASHBOARD -->
+        <section id="view-dashboard" class="view-section active">
+          <!-- Banner de Restauro de Dados Demo (apenas Admin) -->
+          <div id="banner-reset-demo" style="display:none; background: linear-gradient(135deg, #1e3a5f, #0f2744); border: 1px solid #3b82f6; border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <i class="ri-database-2-line" style="font-size: 1.5rem; color: #60a5fa;"></i>
+            <div style="flex:1;">
+              <div style="font-weight: 700; color: #93c5fd; font-size: 0.95rem;">Sistema sem dados demonstrativos</div>
+              <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">Clique para carregar os expedientes, utilizadores e registos de auditoria de demonstração.</div>
+            </div>
+            <button onclick="window.resetDemoData()" style="background: #3b82f6; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+              <i class="ri-refresh-line"></i> Restaurar Dados Demo
+            </button>
+          </div>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div>
+                <div class="kpi-title">Total Expedientes</div>
+                <div class="kpi-value" id="kpi-total-exp">0</div>
+              </div>
+              <div class="kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                <i class="ri-folders-line"></i>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div>
+                <div class="kpi-title">Em Tramitação</div>
+                <div class="kpi-value" id="kpi-tramitacao">0</div>
+              </div>
+              <div class="kpi-icon" style="background: #fef3c7; color: #b45309;">
+                <i class="ri-route-line"></i>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div>
+                <div class="kpi-title">Despachados / Deferidos</div>
+                <div class="kpi-value" id="kpi-deferidos">0</div>
+              </div>
+              <div class="kpi-icon" style="background: #d1fae5; color: #047857;">
+                <i class="ri-checkbox-circle-line"></i>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div>
+                <div class="kpi-title">Processos Urgentes</div>
+                <div class="kpi-value" id="kpi-urgentes">0</div>
+              </div>
+              <div class="kpi-icon" style="background: #fee2e2; color: #b91c1c;">
+                <i class="ri-alarm-warning-line"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard Charts -->
+          <div class="chart-grid">
+            <div class="glass" style="padding: 1.5rem; border-radius: var(--radius-lg);">
+              <h3 style="font-size: 1.05rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main);">
+                <i class="ri-bar-chart-box-line" style="color: var(--primary);"></i> Distribuição por Estado do Processo
+              </h3>
+              <div style="height: 260px; position: relative;">
+                <canvas id="chart-status"></canvas>
+              </div>
+            </div>
+
+            <div class="glass" style="padding: 1.5rem; border-radius: var(--radius-lg);">
+              <h3 style="font-size: 1.05rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main);">
+                <i class="ri-pie-chart-line" style="color: var(--primary);"></i> Nível de Prioridade
+              </h3>
+              <div style="height: 260px; position: relative;">
+                <canvas id="chart-priority"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 2: EXPEDIENTES -->
+        <section id="view-expedientes" class="view-section">
+          <div style="display: flex; gap: 1rem; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem;">
+            <div style="display: flex; gap: 0.75rem; flex: 1; min-width: 280px;">
+              <div class="input-with-icon" style="flex: 1;">
+                <i class="ri-search-2-line"></i>
+                <input type="text" id="search-expedientes" class="form-control" placeholder="Pesquisar por NUP (ex: EXP-2026-0001), título, requerente..." onkeyup="filterExpedientes()">
+              </div>
+              <select id="filter-status" class="form-control" style="max-width: 190px;" onchange="filterExpedientes()">
+                <option value="">Todos os Estados</option>
+                <option value="Entrada">Entrada</option>
+                <option value="Em Tramitação">Em Tramitação</option>
+                <option value="Deferido">Deferido</option>
+                <option value="Indeferido">Indeferido</option>
+                <option value="Arquivado">Arquivado</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="btn-new-exp" onclick="openNewExpedientModal()" style="display: none;">
+              <i class="ri-add-line"></i> Novo Expediente
+            </button>
+          </div>
+
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>NUP</th>
+                  <th>Título & Requerente</th>
+                  <th>Prioridade</th>
+                  <th>Confidencialidade</th>
+                  <th>Departamento Atual</th>
+                  <th>Estado</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-expedientes">
+                <!-- Dynamically Populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- VIEW 3: UTILIZADORES -->
+        <section id="view-users" class="view-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+            <h3 style="font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="ri-user-shared-line" style="color: var(--primary);"></i> Gestão de Utilizadores e Perfis
+            </h3>
+            <button class="btn btn-primary" onclick="openUserModal()">
+              <i class="ri-user-add-line"></i> Adicionar Utilizador
+            </button>
+          </div>
+
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nome Completo</th>
+                  <th>E-mail</th>
+                  <th>Departamento</th>
+                  <th>Perfil RBAC</th>
+                  <th>Estado</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-users">
+                <!-- Dynamically Populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- VIEW 4: MATRIZ RBAC -->
+        <section id="view-rbac" class="view-section">
+          <div class="glass" style="padding: 1.5rem; border-radius: var(--radius-lg);">
+            <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="ri-shield-keyhole-line" style="color: var(--primary);"></i> Matriz de Controle de Acesso Baseado em Papéis (RBAC)
+            </h3>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+              Configure aqui quais permissões cada perfil possui. Administradores possuem acesso total irrestrito ao sistema.
+            </p>
+
+            <div id="rbac-matrix-container">
+              <!-- Dynamically Populated RBAC Matrix Table -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 5: AUDITORIA & RELATÓRIOS -->
+        <section id="view-audit" class="view-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+            <div class="input-with-icon" style="flex: 1; min-width: 260px;">
+              <i class="ri-search-2-line"></i>
+              <input type="text" id="search-audit" class="form-control" placeholder="Filtrar por utilizador (ex: Amilcar Silva), ação (ex: DESPACHO_EMITIDO) ou entidade..." onkeyup="filterAuditLogs()">
+            </div>
+            <div style="display: flex; gap: 0.6rem;">
+              <button class="btn btn-secondary" onclick="exportAuditCSV()">
+                <i class="ri-file-excel-line"></i> Exportar CSV
+              </button>
+              <button class="btn btn-danger" onclick="clearAuditLogsUI()" id="btn-clear-audit">
+                <i class="ri-delete-bin-line"></i> Limpar Registos
+              </button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>Data / Hora</th>
+                  <th>Utilizador & Perfil</th>
+                  <th>Ação Realizada</th>
+                  <th>Entidade</th>
+                  <th>Detalhes da Operação</th>
+                  <th>Endereço IP</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-audit">
+                <!-- Dynamically Populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 3. MODAIS INTERATIVOS                      -->
+  <!-- ========================================== -->
+
+  <!-- Modal 1: Novo Expediente -->
+  <div class="modal-overlay" id="modal-new-exp">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title"><i class="ri-file-add-line"></i> Registar Novo Expediente</div>
+        <button class="btn-close" onclick="closeModal('modal-new-exp')" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="form-new-exp">
+        <div class="form-group">
+          <label for="exp-title">Título do Expediente *</label>
+          <input type="text" id="exp-title" class="form-control" placeholder="Ex: Aquisição de 10 Licenças de Software Antivírus Corporativo" required>
+        </div>
+        <div class="grid-2col">
+          <div class="form-group">
+            <label for="exp-applicant">Requerente / Entidade de Origem *</label>
+            <input type="text" id="exp-applicant" class="form-control" placeholder="Ex: Direção de Redes e Sistemas de Informação" required>
+          </div>
+          <div class="form-group">
+            <label for="exp-dept">Departamento de Destino Inicial</label>
+            <select id="exp-dept" class="form-control">
+              <option value="Secretaria-Geral">Secretaria-Geral</option>
+              <option value="Departamento Jurídico">Departamento Jurídico</option>
+              <option value="Direção de Finanças">Direção de Finanças</option>
+              <option value="Recursos Humanos">Recursos Humanos</option>
+              <option value="Tecnologias de Informação">Tecnologias de Informação</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-2col">
+          <div class="form-group">
+            <label for="exp-priority">Prioridade</label>
+            <select id="exp-priority" class="form-control">
+              <option value="Média">Média</option>
+              <option value="Baixa">Baixa</option>
+              <option value="Alta">Alta</option>
+              <option value="Urgente">Urgente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="exp-confidentiality">Nível de Confidencialidade</label>
+            <select id="exp-confidentiality" class="form-control">
+              <option value="Público">Público</option>
+              <option value="Reservado">Reservado</option>
+              <option value="Confidencial">Confidencial (Acesso Restrito)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="exp-subject">Descrição do Assunto *</label>
+          <textarea id="exp-subject" class="form-control" placeholder="Ex: Solicitação de parecer técnico e alocação orçamental para renovação de licenças anuais dos servidores centrais." required></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-exp')">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Submeter Expediente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Detalhes do Expediente & Linha do Tempo -->
+  <div class="modal-overlay" id="modal-view-exp">
+    <div class="modal-container" style="max-width: 750px;">
+      <div class="modal-header">
+        <div class="modal-title" id="view-exp-nup">Expediente NUP</div>
+        <button class="btn-close" onclick="closeModal('modal-view-exp')" aria-label="Fechar">&times;</button>
+      </div>
+      <div id="view-exp-content">
+        <!-- Dynamically Rendered -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Tramitar Expediente -->
+  <div class="modal-overlay" id="modal-tramitar">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title"><i class="ri-route-line"></i> Tramitar / Encaminhar Processo</div>
+        <button class="btn-close" onclick="closeModal('modal-tramitar')" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="form-tramitar">
+        <input type="hidden" id="tramitar-exp-id">
+        <div class="form-group">
+          <label for="tramitar-to-dept">Departamento de Destino *</label>
+          <select id="tramitar-to-dept" class="form-control" required>
+            <option value="Secretaria-Geral">Secretaria-Geral</option>
+            <option value="Departamento Jurídico">Departamento Jurídico</option>
+            <option value="Direção de Finanças">Direção de Finanças</option>
+            <option value="Recursos Humanos">Recursos Humanos</option>
+            <option value="Tecnologias de Informação">Tecnologias de Informação</option>
+            <option value="Gabinete do Director">Gabinete do Director</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="tramitar-opinion">Parecer Técnico / Instruções de Tramitação *</label>
+          <textarea id="tramitar-opinion" class="form-control" placeholder="Ex: Parecer Técnico: Verificada a conformidade legal e a cabimento no plano financeiro. Recomenda-se o encaminhamento para o despacho decisório." required></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-tramitar')">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="ri-send-plane-fill"></i> Confirmar Tramitação</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Despacho Decisório -->
+  <div class="modal-overlay" id="modal-despacho">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title"><i class="ri-quill-pen-line"></i> Emitir Despacho Decisório</div>
+        <button class="btn-close" onclick="closeModal('modal-despacho')" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="form-despacho">
+        <input type="hidden" id="despacho-exp-id">
+        <div class="form-group">
+          <label for="despacho-decision">Decisão Administrativa *</label>
+          <select id="despacho-decision" class="form-control" required>
+            <option value="Deferido">Deferido (Aprovado)</option>
+            <option value="Indeferido">Indeferido (Rejeitado)</option>
+            <option value="Informação Adicional">Solicitada Informação Adicional</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="despacho-justification">Fundamentação da Decisão *</label>
+          <textarea id="despacho-justification" class="form-control" placeholder="Ex: Autorizado a prosseguir conforme parecer técnico favorável e disponibilidade orçamental confirmada pelo Rubro 02.01.04." required></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-despacho')">Cancelar</button>
+          <button type="submit" class="btn btn-success"><i class="ri-check-double-line"></i> Assinar Despacho</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 5: Arquivar Expediente -->
+  <div class="modal-overlay" id="modal-arquivar">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title"><i class="ri-archive-line"></i> Arquivar Expediente</div>
+        <button class="btn-close" onclick="closeModal('modal-arquivar')" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="form-arquivar">
+        <input type="hidden" id="arquivar-exp-id">
+        <div class="form-group">
+          <label for="arquivar-location">Cód. Localização Física / Digital *</label>
+          <input type="text" id="arquivar-location" class="form-control" placeholder="Ex: Armário A3, Prateleira 2, Pasta 2026-FIN (Cód. DGF-2026-ARC04)" required>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-arquivar')">Cancelar</button>
+          <button type="submit" class="btn btn-warning"><i class="ri-archive-line"></i> Confirmar Arquivamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 6: Novo / Editar Utilizador -->
+  <div class="modal-overlay" id="modal-user">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-user-title">Adicionar Utilizador</div>
+        <button class="btn-close" onclick="closeModal('modal-user')" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="form-user">
+        <input type="hidden" id="user-id">
+        <div class="form-group">
+          <label for="user-name">Nome Completo *</label>
+          <input type="text" id="user-name" class="form-control" placeholder="Ex: Dr. Carlos Alberto Machava" required>
+        </div>
+        <div class="form-group">
+          <label for="user-email">E-mail de Acesso *</label>
+          <input type="email" id="user-email" class="form-control" placeholder="Ex: carlos.machava@sge.gov.mz" required>
+        </div>
+        <div class="form-group">
+          <label for="user-password">Palavra-passe (Deixe em branco para não alterar se estiver editando)</label>
+          <input type="password" id="user-password" class="form-control" placeholder="Ex: SenhaSegura123!">
+        </div>
+        <div class="grid-2col">
+          <div class="form-group">
+            <label for="user-role-select">Perfil RBAC *</label>
+            <select id="user-role-select" class="form-control" required>
+              <option value="1">Administrador do Sistema</option>
+              <option value="2">Chefe de Secretaria / Gestor</option>
+              <option value="3">Técnico Tramitador</option>
+              <option value="4">Consultor / Leitor</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="user-department">Departamento</label>
+            <input type="text" id="user-department" class="form-control" placeholder="Ex: Departamento Jurídico">
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-user')">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Salvar Utilizador</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Relative JS Script Link -->
+  <script src="./js/app.js"></script>
+</body>
+</html>

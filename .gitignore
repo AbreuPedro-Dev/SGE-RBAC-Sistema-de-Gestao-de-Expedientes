@@ -1,0 +1,15 @@
+# Dependências Node.js
+node_modules/
+
+# Logs do sistema
+*.log
+npm-debug.log*
+
+# Ficheiros do ambiente local
+.env
+.DS_Store
+Thumbs.db
+
+# Ficheiros temporários da IDE
+.vscode/
+.idea/

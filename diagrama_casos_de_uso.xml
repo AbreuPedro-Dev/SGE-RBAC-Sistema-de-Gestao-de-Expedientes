@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" version="21.6.8" type="device">
+  <diagram id="SGE_RBAC_Use_Case" name="Diagrama de Casos de Uso SGE-RBAC">
+    <mxGraphModel dx="1400" dy="950" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="980" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Container do Sistema SGE-RBAC -->
+        <mxCell id="system_box" value="Sistema de Gestão de Expedientes (SGE-RBAC)" style="shape=swimlane;whiteSpace=wrap;html=1;startSize=35;horizontal=1;fillColor=#F8FAFC;strokeColor=#0F766E;fontStyle=1;fontSize=14;fontColor=#0E3835;" vertex="1" parent="1">
+          <mxGeometry x="340" y="30" width="480" height="900" as="geometry" />
+        </mxCell>
+
+        <!-- Casos de Uso (Elipses organizadas dentro do Container) -->
+        <mxCell id="uc_auth" value="Autenticar no Sistema" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontStyle=1;fontColor=#0369A1;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="50" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_users" value="Gerir Utilizadores" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontStyle=1;fontColor=#334155;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="115" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_rbac" value="Configurar Matriz RBAC" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontStyle=1;fontColor=#334155;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="180" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_reset" value="Restaurar Dados Demo" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontStyle=1;fontColor=#334155;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="245" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_read_pub" value="Consultar Expedientes Públicos" style="ellipse;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontStyle=1;fontColor=#15803D;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="310" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_reg_exp" value="Registar Expediente" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontStyle=1;fontColor=#0369A1;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="375" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_tramitar" value="Tramitar Expediente / Emitir Parecer" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontStyle=1;fontColor=#0369A1;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="440" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_read_conf" value="Consultar Expedientes Confidenciais" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#D97706;fontStyle=1;fontColor=#B45309;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="505" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_despachar" value="Emitir Despacho Decisório" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#D97706;fontStyle=1;fontColor=#B45309;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="570" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_arquivar" value="Arquivar Expediente" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#D97706;fontStyle=1;fontColor=#B45309;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="635" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_audit" value="Consultar Logs de Auditoria" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontStyle=1;fontColor=#334155;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="700" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_export" value="Exportar Relatórios CSV" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F1F5F9;strokeColor=#475569;fontStyle=1;fontColor=#334155;" vertex="1" parent="system_box">
+          <mxGeometry x="140" y="765" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Atores Esquerda -->
+        <mxCell id="actor_leitor" value="Consultor / Leitor" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#DCFCE7;strokeColor=#16A34A;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="210" width="40" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="actor_tecnico" value="Técnico Tramitador" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#E0F2FE;strokeColor=#0284C7;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="440" width="40" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Atores Direita -->
+        <mxCell id="actor_gestor" value="Chefe de Secretaria / Gestor" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#FEF3C7;strokeColor=#D97706;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="930" y="500" width="40" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="actor_admin" value="Administrador" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#F1F5F9;strokeColor=#475569;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="930" y="220" width="40" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Ligações: Consultor / Leitor -->
+        <mxCell id="edge_l1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#16A34A;strokeWidth=2;" edge="1" parent="1" source="actor_leitor" target="uc_auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_l2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#16A34A;strokeWidth=2;" edge="1" parent="1" source="actor_leitor" target="uc_read_pub">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Ligações: Técnico -->
+        <mxCell id="edge_t1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#0284C7;strokeWidth=2;" edge="1" parent="1" source="actor_tecnico" target="uc_auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_t2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#0284C7;strokeWidth=2;" edge="1" parent="1" source="actor_tecnico" target="uc_read_pub">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_t3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#0284C7;strokeWidth=2;" edge="1" parent="1" source="actor_tecnico" target="uc_reg_exp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_t4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#0284C7;strokeWidth=2;" edge="1" parent="1" source="actor_tecnico" target="uc_tramitar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Ligações: Gestor -->
+        <mxCell id="edge_g1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#D97706;strokeWidth=2;" edge="1" parent="1" source="actor_gestor" target="uc_auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#D97706;strokeWidth=2;" edge="1" parent="1" source="actor_gestor" target="uc_read_pub">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#D97706;strokeWidth=2;" edge="1" parent="1" source="actor_gestor" target="uc_read_conf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#D97706;strokeWidth=2;" edge="1" parent="1" source="actor_gestor" target="uc_reg_exp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#D97706;strokeWidth=2;" edge="1" parent="1" source="actor_gestor" target="uc_tramitar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#D97706;strokeWidth=2;" edge="1" parent="1" source="actor_gestor" target="uc_despachar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#D97706;strokeWidth=2;" edge="1" parent="1" source="actor_gestor" target="uc_arquivar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#D97706;strokeWidth=2;" edge="1" parent="1" source="actor_gestor" target="uc_audit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_g9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#D97706;strokeWidth=2;" edge="1" parent="1" source="actor_gestor" target="uc_export">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Ligações: Admin -->
+        <mxCell id="edge_a1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="actor_admin" target="uc_auth">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_a2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="actor_admin" target="uc_users">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_a3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="actor_admin" target="uc_rbac">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_a4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="actor_admin" target="uc_reset">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_a5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="actor_admin" target="uc_audit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_a6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="actor_admin" target="uc_export">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_a7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="actor_admin" target="uc_read_pub">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_a8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="actor_admin" target="uc_read_conf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_a9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="actor_admin" target="uc_despachar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_a10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;endFill=0;strokeColor=#475569;strokeWidth=2;" edge="1" parent="1" source="actor_admin" target="uc_arquivar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
