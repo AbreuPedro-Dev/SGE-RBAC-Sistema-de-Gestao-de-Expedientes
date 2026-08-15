@@ -1,12 +1,12 @@
-// State Management
-let currentUser = null;
-let currentToken = localStorage.getItem('sge_token') || null;
-let cachedExpedientes = [];
-let cachedAuditLogs = [];
-let statusChartInstance = null;
-let priorityChartInstance = null;
+// Gestão de Estado da Aplicação (Variáveis Globais do Frontend)
+let currentUser = null;                         // Guarda os dados do utilizador autenticado no momento
+let currentToken = localStorage.getItem('sge_token') || null; // Guarda o Token de Segurança (JWT) para manter a sessão ativa
+let cachedExpedientes = [];                     // Guarda em memória a lista de expedientes/processos carregados da API
+let cachedAuditLogs = [];                       // Guarda em memória a lista de registos de auditoria carregados da API
+let statusChartInstance = null;                 // Guarda a instância ativa do gráfico de estados (Chart.js)
+let priorityChartInstance = null;               // Guarda a instância ativa do gráfico de prioridades (Chart.js)
 
-// Initialization
+// Inicialização e Eventos da Aplicação
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   if (currentToken) {
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showLogin();
   }
 
-  // Event Listeners
+  // Registadores de Eventos do Formulário
   document.getElementById('login-form').addEventListener('submit', handleLogin);
   document.getElementById('form-new-exp').addEventListener('submit', handleCreateExpedient);
   document.getElementById('form-tramitar').addEventListener('submit', handleTramitarSubmit);
@@ -24,11 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('form-user').addEventListener('submit', handleUserSubmit);
 });
 
-// Helper for API base URL (supports opening index.html directly as a file)
+// Auxiliar para URL base da API (Suporta abertura do index.html diretamente como ficheiro local)
 const API_BASE = (window.location.protocol === 'file:' || !window.location.port) ? 'http://localhost:3000' : '';
 
-// Helper: Quick Demo Fill (Pre-fills credentials for user to click 'Entrar')
-window.fillDemo = function(email, password) {
+// Auxiliar: Preenchimento Rápido de Demonstração (Preenche credenciais na tela de login)
+window.fillDemo = function (email, password) {
   const emailInput = document.getElementById('login-email');
   const passwordInput = document.getElementById('login-password');
   if (emailInput) emailInput.value = email;
@@ -36,14 +36,14 @@ window.fillDemo = function(email, password) {
   showToast(`Credenciais de ${email} preenchidas. Clique em 'Entrar'.`, 'info');
 };
 
-// Theme Management
+// Gestão do Tema Visual (Claro / Escuro)
 function initTheme() {
   const saved = localStorage.getItem('sge_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
   updateThemeIcon(saved);
 }
 
-window.toggleTheme = function() {
+window.toggleTheme = function () {
   const current = document.documentElement.getAttribute('data-theme') || 'dark';
   const next = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
@@ -58,7 +58,7 @@ function updateThemeIcon(theme) {
   }
 }
 
-// Toast Notifications
+// Notificações Flutuantes (Toast)
 function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;
@@ -71,7 +71,7 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
-// API Fetch Helper
+// Auxiliar de Requisições à API REST (Fetch)
 async function apiFetch(url, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ async function apiFetch(url, options = {}) {
   }
 }
 
-// Auth Handlers
+// Controladores de Autenticação (Login e Perfil)
 async function handleLogin(e) {
   e.preventDefault();
   const email = document.getElementById('login-email').value;
@@ -132,7 +132,7 @@ async function fetchProfile() {
   }
 }
 
-window.logout = function() {
+window.logout = function () {
   currentToken = null;
   currentUser = null;
   localStorage.removeItem('sge_token');
@@ -148,7 +148,7 @@ function showAppLayout() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-layout').style.display = 'flex';
 
-  // Render User Info in Sidebar & Header Banner
+  // Renderizar Informações do Utilizador no Menu Lateral e Cabeçalho
   document.getElementById('user-name-display').innerText = currentUser.name;
   const welcomeTitle = document.getElementById('welcome-user-title');
   if (welcomeTitle) welcomeTitle.innerText = `Bem-vindo, ${currentUser.name}`;
@@ -161,13 +161,13 @@ function showAppLayout() {
   }
   const roleBadge = document.getElementById('user-role-display');
   roleBadge.innerText = currentUser.role_name;
-  
+
   if (currentUser.role_code === 'admin') roleBadge.style.background = '#ef4444';
   else if (currentUser.role_code === 'gestor') roleBadge.style.background = '#f59e0b';
   else if (currentUser.role_code === 'tecnico') roleBadge.style.background = '#0f766e';
   else roleBadge.style.background = '#10b981';
 
-  // Apply RBAC Navigation Visibility
+  // Aplicar Visibilidade da Navegação Baseada no RBAC
   const hasUserMgmt = currentUser.role_code === 'admin' || currentUser.permissions.includes('users:manage');
   const hasRbacMgmt = currentUser.role_code === 'admin' || currentUser.permissions.includes('rbac:manage');
   const hasAuditView = currentUser.role_code === 'admin' || currentUser.permissions.includes('audit:view');
@@ -184,8 +184,8 @@ function showAppLayout() {
   loadExpedientesData();
 }
 
-// Mobile Sidebar Drawer Toggle Helper
-window.toggleMobileSidebar = function() {
+// Auxiliar de Alternância do Menu Lateral em Dispositivos Móveis
+window.toggleMobileSidebar = function () {
   const sidebar = document.getElementById('main-sidebar');
   const overlay = document.getElementById('sidebar-overlay');
   if (sidebar && overlay) {
@@ -194,9 +194,9 @@ window.toggleMobileSidebar = function() {
   }
 };
 
-// Navigation & Tab Switching
-window.switchTab = function(tabName) {
-  // Close mobile sidebar drawer if open
+// Navegação e Alternância de Abas
+window.switchTab = function (tabName) {
+  // Fechar o menu lateral móvel se estiver aberto
   const sidebar = document.getElementById('main-sidebar');
   const overlay = document.getElementById('sidebar-overlay');
   if (sidebar && sidebar.classList.contains('mobile-active')) {
@@ -221,11 +221,11 @@ window.switchTab = function(tabName) {
   document.getElementById(`view-${tabName}`).classList.add('active');
   document.getElementById('current-view-title').innerText = titles[tabName] || 'Painel SGE';
 
-  // Find active nav link
+  // Encontrar o link de navegação ativo
   const activeLink = Array.from(links).find(l => l.getAttribute('onclick')?.includes(tabName));
   if (activeLink) activeLink.classList.add('active');
 
-  // Load section data
+  // Carregar dados da secção selecionada
   if (tabName === 'dashboard') loadDashboardData();
   else if (tabName === 'expedientes') loadExpedientesData();
   else if (tabName === 'users') loadUsersData();
@@ -233,7 +233,7 @@ window.switchTab = function(tabName) {
   else if (tabName === 'audit') loadAuditData();
 };
 
-// 1. DASHBOARD MODULE
+// 1. MÓDULO DO DASHBOARD E ESTATÍSTICAS
 async function loadDashboardData() {
   try {
     const data = await apiFetch('/api/stats');
@@ -244,7 +244,7 @@ async function loadDashboardData() {
     document.getElementById('kpi-deferidos').innerText = stats.deferidos;
     document.getElementById('kpi-urgentes').innerText = stats.urgentes;
 
-    // Show restore banner if user is admin (always visible for admins)
+    // Exibir banner de restauro se o utilizador for administrador, onde se faz 
     const banner = document.getElementById('banner-reset-demo');
     if (banner) {
       const isAdmin = currentUser && currentUser.role_code === 'admin';
@@ -257,7 +257,7 @@ async function loadDashboardData() {
   }
 }
 
-window.resetDemoData = async function() {
+window.resetDemoData = async function () {
   if (!confirm('Tem a certeza de que deseja restaurar todos os dados demonstrativos? Esta ação repõe utilizadores, expedientes, tramitações, despachos e logs de auditoria nos valores iniciais.')) {
     return;
   }
@@ -265,18 +265,18 @@ window.resetDemoData = async function() {
     showToast('A restaurar dados demonstrativos em todos os módulos...', 'info');
     await apiFetch('/api/reset-demo', { method: 'POST' });
     showToast('Dados demonstrativos restaurados com sucesso em todos os módulos!', 'success');
-    // Reload ALL modules so every section reflects the reset data
+    // Recarregar TODOS os módulos para refletir os dados restaurados
     reloadAllModules();
   } catch (err) {
     showToast('Erro ao restaurar dados: ' + err.message, 'error');
   }
 };
 
-// Reloads every module section that has a data loader
+// Recarrega cada secção de módulo que possua carregador de dados
 function reloadAllModules() {
   loadDashboardData();
   loadExpedientesData();
-  // Only load if user has the required permissions
+  // Carregar apenas se o utilizador tiver as permissões necessárias
   if (currentUser) {
     const perms = currentUser.permissions || [];
     const isAdmin = currentUser.role_code === 'admin';
@@ -292,7 +292,7 @@ function renderDashboardCharts(stats) {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
     const textColor = isLight ? '#0f172a' : '#f8fafc';
 
-    // Chart 1: Status
+    // Gráfico 1: Expedientes por Estado
     const canvasStatus = document.getElementById('chart-status');
     if (canvasStatus) {
       const ctxStatus = canvasStatus.getContext('2d');
@@ -321,7 +321,7 @@ function renderDashboardCharts(stats) {
       });
     }
 
-    // Chart 2: Priority
+    // Gráfico 2: Expedientes por Prioridade
     const canvasPriority = document.getElementById('chart-priority');
     if (canvasPriority) {
       const ctxPriority = canvasPriority.getContext('2d');
@@ -350,7 +350,7 @@ function renderDashboardCharts(stats) {
   }
 }
 
-// 2. EXPEDIENTES MODULE
+// 2. MÓDULO DE GESTÃO DE EXPEDIENTES
 async function loadExpedientesData() {
   try {
     const data = await apiFetch('/api/expedientes');
@@ -378,18 +378,18 @@ function renderExpedientesTable(list) {
 
   list.forEach(exp => {
     const tr = document.createElement('tr');
-    
-    // Status Badge Class
+
+    // Classe do Emblema de Estado
     let statusClass = 'badge-entrada';
     if (exp.status === 'Em Tramitação') statusClass = 'badge-tramitacao';
     else if (exp.status === 'Deferido') statusClass = 'badge-deferido';
     else if (exp.status === 'Indeferido') statusClass = 'badge-indeferido';
     else if (exp.status === 'Arquivado') statusClass = 'badge-arquivado';
 
-    // Priority Badge
+    // Emblema de Prioridade
     let priorityClass = `badge-${exp.priority.toLowerCase()}`;
 
-    // Confidentiality Badge
+    // Emblema de Confidencialidade
     let confBadge = exp.confidentiality === 'Confidencial'
       ? `<span class="badge badge-confidential"><i class="ri-lock-2-line"></i> Confidencial</span>`
       : `<span class="badge badge-public">${exp.confidentiality}</span>`;
@@ -433,7 +433,7 @@ function renderExpedientesTable(list) {
   });
 }
 
-window.filterExpedientes = function() {
+window.filterExpedientes = function () {
   const searchInput = document.getElementById('search-expedientes');
   const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
   const statusSelect = document.getElementById('filter-status');
@@ -456,8 +456,8 @@ window.filterExpedientes = function() {
   renderExpedientesTable(filtered);
 };
 
-// Expedient Details & Timeline Modal
-window.viewExpedientDetails = async function(id) {
+// Modal de Detalhes do Expediente e Linha do Tempo
+window.viewExpedientDetails = async function (id) {
   try {
     const data = await apiFetch(`/api/expedientes/${id}`);
     const exp = data.expedient;
@@ -549,8 +549,8 @@ window.viewExpedientDetails = async function(id) {
   }
 };
 
-// Expedient Actions
-window.openNewExpedientModal = function() {
+// Ações do Expediente (Tramitar, Despachar, Arquivar)
+window.openNewExpedientModal = function () {
   document.getElementById('form-new-exp').reset();
   openModal('modal-new-exp');
 };
@@ -579,7 +579,7 @@ async function handleCreateExpedient(e) {
   }
 }
 
-window.openTramitarModal = function(id) {
+window.openTramitarModal = function (id) {
   document.getElementById('tramitar-exp-id').value = id;
   document.getElementById('form-tramitar').reset();
   openModal('modal-tramitar');
@@ -606,7 +606,7 @@ async function handleTramitarSubmit(e) {
   }
 }
 
-window.openDespachoModal = function(id) {
+window.openDespachoModal = function (id) {
   document.getElementById('despacho-exp-id').value = id;
   document.getElementById('form-despacho').reset();
   openModal('modal-despacho');
@@ -633,7 +633,7 @@ async function handleDespachoSubmit(e) {
   }
 }
 
-window.openArquivarModal = function(id) {
+window.openArquivarModal = function (id) {
   document.getElementById('arquivar-exp-id').value = id;
   document.getElementById('form-arquivar').reset();
   openModal('modal-arquivar');
@@ -659,7 +659,7 @@ async function handleArquivarSubmit(e) {
   }
 }
 
-// 3. USER MANAGEMENT MODULE
+// 3. MÓDULO DE GESTÃO DE UTILIZADORES
 async function loadUsersData() {
   try {
     const data = await apiFetch('/api/users');
@@ -700,14 +700,14 @@ function escapeHtml(str) {
   return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
-window.openUserModal = function() {
+window.openUserModal = function () {
   document.getElementById('modal-user-title').innerText = 'Adicionar Novo Utilizador';
   document.getElementById('user-id').value = '';
   document.getElementById('form-user').reset();
   openModal('modal-user');
 };
 
-window.editUser = function(id, name, email, roleId, department) {
+window.editUser = function (id, name, email, roleId, department) {
   document.getElementById('modal-user-title').innerText = 'Editar Utilizador';
   document.getElementById('user-id').value = id;
   document.getElementById('user-name').value = name;
@@ -751,7 +751,7 @@ async function handleUserSubmit(e) {
   }
 }
 
-// 4. RBAC MATRIX MODULE
+// 4. MÓDULO DE MATRIZ DE PERMISSÕES RBAC
 async function loadRbacData() {
   try {
     const data = await apiFetch('/api/roles');
@@ -810,7 +810,7 @@ function renderRbacMatrix(roles, permissions) {
   container.innerHTML = html;
 }
 
-window.toggleRbacPermission = async function(roleId, permissionId, isChecked) {
+window.toggleRbacPermission = async function (roleId, permissionId, isChecked) {
   try {
     const data = await apiFetch('/api/roles');
     const role = data.roles.find(r => r.id === roleId);
@@ -830,11 +830,11 @@ window.toggleRbacPermission = async function(roleId, permissionId, isChecked) {
     showToast('Matriz de permissões RBAC atualizada!', 'success');
   } catch (err) {
     showToast(err.message, 'error');
-    loadRbacData(); // Reload on fail
+    loadRbacData(); // Recarregar em caso de falha
   }
 };
 
-// 5. AUDIT LOGS MODULE
+// 5. MÓDULO DE LOGS DE AUDITORIA
 async function loadAuditData() {
   try {
     const data = await apiFetch('/api/audit-logs');
@@ -873,18 +873,18 @@ function renderAuditTable(logs) {
   });
 }
 
-window.filterAuditLogs = function() {
+window.filterAuditLogs = function () {
   const query = document.getElementById('search-audit').value.toLowerCase();
   const filtered = cachedAuditLogs.filter(l => {
     return l.user_name.toLowerCase().includes(query) ||
-           l.action.toLowerCase().includes(query) ||
-           l.details.toLowerCase().includes(query) ||
-           l.entity.toLowerCase().includes(query);
+      l.action.toLowerCase().includes(query) ||
+      l.details.toLowerCase().includes(query) ||
+      l.entity.toLowerCase().includes(query);
   });
   renderAuditTable(filtered);
 };
 
-window.exportAuditCSV = function() {
+window.exportAuditCSV = function () {
   if (!cachedAuditLogs.length) {
     showToast('Sem dados para exportar.', 'error');
     return;
@@ -909,14 +909,14 @@ window.exportAuditCSV = function() {
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement('a');
   link.setAttribute('href', encodedUri);
-  link.setAttribute('download', `SGE_Auditoria_${new Date().toISOString().slice(0,10)}.csv`);
+  link.setAttribute('download', `SGE_Auditoria_${new Date().toISOString().slice(0, 10)}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   showToast('Ficheiro CSV gerado com sucesso!', 'success');
 };
 
-window.clearAuditLogsUI = async function() {
+window.clearAuditLogsUI = async function () {
   if (!confirm('Tem a certeza de que deseja eliminar todos os registos de auditoria? Esta ação não pode ser desfeita.')) {
     return;
   }
@@ -933,11 +933,11 @@ window.clearAuditLogsUI = async function() {
 };
 
 
-// Modal Utility Functions
+// Funções Utilitárias para Modais
 function openModal(id) {
   document.getElementById(id).classList.add('active');
 }
 
-window.closeModal = function(id) {
+window.closeModal = function (id) {
   document.getElementById(id).classList.remove('active');
 };
