@@ -43,14 +43,15 @@ O sistema garante **integridade**, **rastreabilidade** e **confidencialidade** d
 
 ## 👥 Equipe de Desenvolvimento e Atribuições
 
-O projeto **SGE-RBAC** foi desenvolvido em colaboração pela dupla de Engenharia de Software:
+O projeto **SGE-RBAC** foi desenvolvido em colaboração pela dupla de estudantes, do 3 ano de Engenharia de Software:
 
 - 👨‍💻 **Abreu Martinho Pedro** (*Desenvolvedor A — Frontend & UI* | GitHub: [`AbreuPedro-Dev`](https://github.com/AbreuPedro-Dev)):
-  - **Responsabilidades:** Desenvolvimento da SPA ([public/index.html](file:///c:/Users/user/Desktop/Testes%20de%20Projetos/Aluno%201/public/index.html)), interface visual da matriz de permissões RBAC ([public/js/app.js](file:///c:/Users/user/Desktop/Testes%20de%20Projetos/Aluno%201/public/js/app.js)), estilos Glassmorphic e temas ([public/css/style.css](file:///c:/Users/user/Desktop/Testes%20de%20Projetos/Aluno%201/public/css/style.css)).
-  - **Branch de Trabalho:** `feature/frontend-rbac-ui`
 
+  - **Responsabilidades:** Desenvolvimento da SPA ([public/index.html](<file:///c:/Users/user/Desktop/Testes%20de%20Projetos/Aluno%201/public/index.html>)), interface visual da matriz de permissões RBAC ([public/js/app.js](<file:///c:/Users/user/Desktop/Testes%20de%20Projetos/Aluno%201/public/js/app.js>)), estilos Glassmorphic e temas ([public/css/style.css](<file:///c:/Users/user/Desktop/Testes%20de%20Projetos/Aluno%201/public/css/style.css>)).
+  - **Branch de Trabalho:** `feature/frontend-rbac-ui`
 - 🛠️ **Paulo José Massingue Júnior** (*Desenvolvedor B — Backend & API* | GitHub: [`Paulo-Junior97`](https://github.com/Paulo-Junior97)):
-  - **Responsabilidades:** Implementação do servidor Node.js/Express ([server.js](file:///c:/Users/user/Desktop/Testes%20de%20Projetos/Aluno%201/server.js)), endpoints da API REST (`/api/auth`, `/api/expedientes`, `/api/auditoria`), segurança JWT, encriptação `bcrypt` e persistência de dados.
+
+  - **Responsabilidades:** Implementação do servidor Node.js/Express ([server.js](<file:///c:/Users/user/Desktop/Testes%20de%20Projetos/Aluno%201/server.js>)), endpoints da API REST (`/api/auth`, `/api/expedientes`, `/api/auditoria`), segurança JWT, encriptação `bcrypt` e persistência de dados.
   - **Branch de Trabalho:** `feature/backend-api-expedientes`
 
 ---
@@ -59,12 +60,12 @@ O projeto **SGE-RBAC** foi desenvolvido em colaboração pela dupla de Engenhari
 
 O sistema já vem pre-populado com 4 contas de teste representando cada um dos perfis de acesso do RBAC:
 
-| Perfil RBAC | E-mail de Acesso | Palavra-passe | Nível de Permissão |
+| Perfil RBAC                   | E-mail de Acesso       | Palavra-passe   | Nível de Permissão                          |
 | :---------------------------- | :--------------------- | :-------------- | :-------------------------------------------- |
-| **Administrador** | `admin@sge.gov.mz` | `Admin123!` | Acesso Total (Gerir Users, RBAC, Auditoria) |
-| **Chefe / Gestor** | `gestor@sge.gov.mz` | `Gestor123!` | Criar, Despachar, Arquivar, Ver Confidenciais |
-| **Técnico Tramitador** | `tecnico@sge.gov.mz` | `Tecnico123!` | Consultar, Tramitar, Emitir Pareceres |
-| **Consultor / Leitor** | `leitor@sge.gov.mz` | `Leitor123!` | Acesso Somente Leitura a Processos Públicos |
+| **Administrador**       | `admin@sge.gov.mz`   | `Admin123!`   | Acesso Total (Gerir Users, RBAC, Auditoria)   |
+| **Chefe / Gestor**      | `gestor@sge.gov.mz`  | `Gestor123!`  | Criar, Despachar, Arquivar, Ver Confidenciais |
+| **Técnico Tramitador** | `tecnico@sge.gov.mz` | `Tecnico123!` | Consultar, Tramitar, Emitir Pareceres         |
+| **Consultor / Leitor**  | `leitor@sge.gov.mz`  | `Leitor123!`  | Acesso Somente Leitura a Processos Públicos  |
 
 ---
 
@@ -83,13 +84,11 @@ O sistema já vem pre-populado com 4 contas de teste representando cada um dos p
    git clone git@github.com:AbreuPedro-Dev/SGE-RBAC-Sistema-de-Gestao-de-Expedientes.git
    cd SGE-RBAC-Sistema-de-Gestao-de-Expedientes
    ```
-
 2. **Instalar as dependências**:
 
    ```bash
    npm install
    ```
-
 3. **Iniciar a aplicação**:
 
    ```bash
@@ -101,7 +100,6 @@ O sistema já vem pre-populado com 4 contas de teste representando cada um dos p
    ```bash
    npm run dev
    ```
-
 4. **Aceder à aplicação no navegador**:
    Abra o seu navegador web e aceda ao endereço:
    👉 **`http://localhost:3000`**
@@ -170,4 +168,4 @@ SGE-RBAC/
   2. Estudante 2: Paulo Júnior (`Paulo-Junior97`)
 - **Link do Repositório GitHub**: [https://github.com/AbreuPedro-Dev/SGE-RBAC-Sistema-de-Gestao-de-Expedientes](https://github.com/AbreuPedro-Dev/SGE-RBAC-Sistema-de-Gestao-de-Expedientes)
 
-> **Nota para Avaliação**: Ambos os estudantes do grupo submeteram o relatório na sala virtual e possuem histórico ativo de *commits* verificável no repositório GitHub acima.
+> **Nota**: Ambos os estudantes do grupo submeteram o relatório na sala virtual e possuem histórico ativo de *commits* verificável no repositório GitHub acima.
