@@ -1,310 +1,417 @@
-// Gestão de Estado da Aplicação (Variáveis Globais do Frontend)
-let currentUser = null;                         // Guarda os dados do utilizador autenticado no momento
-let currentToken = localStorage.getItem('sge_token') || null; // Guarda o Token de Segurança (JWT) para manter a sessão ativa
-let cachedExpedientes = [];                     // Guarda em memória a lista de expedientes/processos carregados da API
-let cachedAuditLogs = [];                       // Guarda em memória a lista de registos de auditoria carregados da API
-let statusChartInstance = null;                 // Guarda a instância ativa do gráfico de estados (Chart.js)
-let priorityChartInstance = null;               // Guarda a instância ativa do gráfico de prioridades (Chart.js)
+/**
+ * @file app.js
+ * @description Lógica de Interface do Utilizador (Frontend JavaScript SPA) do SGE-RBAC.
+ * Controla a autenticação local, persistência em LocalStorage, gestão de sessão JWT,
+ * renderização dinâmica de tabelas e gráficos (Chart.js), navegação entre secções,
+ * modais de tramitação/despacho/arquivamento e matriz RBAC.
+ */
 
-// Inicialização e Eventos da Aplicação
+// ==========================================
+// GESTÃO DE ESTADO DA APLICAÇÃO (VARIÁVEIS GLOBAIS)
+// ==========================================
+let utilizadorAtual = null;                                             // Guarda os dados do utilizador autenticado no momento
+let tokenAutenticacaoAtual = localStorage.getItem('sge_token') || null; // Guarda o Token JWT de Segurança para manter a sessão ativa
+let expedientesEmMemoria = [];                                         // Cache local da lista de expedientes/processos carregados da API
+let registosAuditoriaEmMemoria = [];                                   // Cache local dos registos de auditoria carregados da API
+let instanciaGraficoEstados = null;                                     // Instância ativa do gráfico de barras de estados (Chart.js)
+let instanciaGraficoPrioridades = null;                                 // Instância ativa do gráfico de rosca de prioridades (Chart.js)
+
+// ==========================================
+// INICIALIZAÇÃO E EVENTOS DOM DA APLICAÇÃO
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  initTheme();
-  if (currentToken) {
-    fetchProfile();
+  inicializarTemaVisual();
+
+  // Se existir um token salvo em LocalStorage, tenta obter o perfil atual
+  if (tokenAutenticacaoAtual) {
+    carregarPerfilUtilizador();
   } else {
-    showLogin();
+    exibirTelaLogin();
   }
 
-  // Registadores de Eventos do Formulário
-  document.getElementById('login-form').addEventListener('submit', handleLogin);
-  document.getElementById('form-new-exp').addEventListener('submit', handleCreateExpedient);
-  document.getElementById('form-tramitar').addEventListener('submit', handleTramitarSubmit);
-  document.getElementById('form-despacho').addEventListener('submit', handleDespachoSubmit);
-  document.getElementById('form-arquivar').addEventListener('submit', handleArquivarSubmit);
-  document.getElementById('form-user').addEventListener('submit', handleUserSubmit);
+  // Registar ouvintes de submissão nos formulários da aplicação
+  const formularioLogin = document.getElementById('login-form');
+  if (formularioLogin) formularioLogin.addEventListener('submit', tratarSubmissaoLogin);
+
+  const formularioNovoExpediente = document.getElementById('form-new-exp');
+  if (formularioNovoExpediente) formularioNovoExpediente.addEventListener('submit', tratarCriacaoExpediente);
+
+  const formularioTramitar = document.getElementById('form-tramitar');
+  if (formularioTramitar) formularioTramitar.addEventListener('submit', tratarSubmissaoTramitacao);
+
+  const formularioDespacho = document.getElementById('form-despacho');
+  if (formularioDespacho) formularioDespacho.addEventListener('submit', tratarSubmissaoDespacho);
+
+  const formularioArquivar = document.getElementById('form-arquivar');
+  if (formularioArquivar) formularioArquivar.addEventListener('submit', tratarSubmissaoArquivamento);
+
+  const formularioUtilizador = document.getElementById('form-user');
+  if (formularioUtilizador) formularioUtilizador.addEventListener('submit', tratarSubmissaoUtilizador);
 });
 
-// Auxiliar para URL base da API (Suporta abertura do index.html diretamente como ficheiro local)
-const API_BASE = (window.location.protocol === 'file:' || !window.location.port) ? 'http://localhost:3000' : '';
+// URL Base da API (Suporta a abertura direta do ficheiro index.html via protocolo file:)
+const URL_BASE_API = (window.location.protocol === 'file:' || !window.location.port) ? 'http://localhost:3000' : '';
 
-// Auxiliar: Preenchimento Rápido de Demonstração (Preenche credenciais na tela de login)
-window.fillDemo = function (email, password) {
-  const emailInput = document.getElementById('login-email');
-  const passwordInput = document.getElementById('login-password');
-  if (emailInput) emailInput.value = email;
-  if (passwordInput) passwordInput.value = password;
-  showToast(`Credenciais de ${email} preenchidas. Clique em 'Entrar'.`, 'info');
+/**
+ * Preenche automaticamente as credenciais na tela de login para demonstração rápida.
+ * 
+ * @param {string} emailUtilizador - Endereço de e-mail de teste
+ * @param {string} palavraPasse - Palavra-passe correspondente
+ */
+window.fillDemo = function (emailUtilizador, palavraPasse) {
+  const campoEmail = document.getElementById('login-email');
+  const campoSenha = document.getElementById('login-password');
+  if (campoEmail) campoEmail.value = emailUtilizador;
+  if (campoSenha) campoSenha.value = palavraPasse;
+  exibirNotificacaoToast(`Credenciais de ${emailUtilizador} preenchidas. Clique em 'Entrar'.`, 'info');
 };
 
-// Gestão do Tema Visual (Claro / Escuro)
-function initTheme() {
-  const saved = localStorage.getItem('sge_theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', saved);
-  updateThemeIcon(saved);
+// ==========================================
+// GESTÃO DO TEMA VISUAL (CLARO / ESCURO)
+// ==========================================
+
+/**
+ * Inicializa o tema visual preferido do utilizador guardado em LocalStorage.
+ */
+function inicializarTemaVisual() {
+  const temaSalvo = localStorage.getItem('sge_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', temaSalvo);
+  atualizarIconeTema(temaSalvo);
 }
 
+/**
+ * Alterna entre os temas visuais 'dark' (escuro) e 'light' (claro).
+ */
 window.toggleTheme = function () {
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('sge_theme', next);
-  updateThemeIcon(next);
+  const temaAtual = document.documentElement.getAttribute('data-theme') || 'dark';
+  const proximoTema = temaAtual === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', proximoTema);
+  localStorage.setItem('sge_theme', proximoTema);
+  atualizarIconeTema(proximoTema);
 };
 
-function updateThemeIcon(theme) {
-  const icon = document.getElementById('theme-icon');
-  if (icon) {
-    icon.className = theme === 'dark' ? 'ri-sun-line' : 'ri-moon-line';
+/**
+ * Atualiza o ícone do botão de alternância de tema no cabeçalho.
+ * 
+ * @param {string} nomeTema - Nome do tema atual ('dark' ou 'light')
+ */
+function atualizarIconeTema(nomeTema) {
+  const iconeTema = document.getElementById('theme-icon');
+  if (iconeTema) {
+    iconeTema.className = nomeTema === 'dark' ? 'ri-sun-line' : 'ri-moon-line';
   }
 }
 
-// Notificações Flutuantes (Toast)
-function showToast(message, type = 'info') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerText = message;
-  container.appendChild(toast);
+// ==========================================
+// SISTEMA DE NOTIFICAÇÕES (TOAST)
+// ==========================================
+
+/**
+ * Exibe uma mensagem de notificação flutuante temporária na interface.
+ * 
+ * @param {string} mensagemTexto - Conteúdo da mensagem a ser exibida
+ * @param {string} tipoNotificacao - Tipo ('info', 'success', 'error', 'warning')
+ */
+function exibirNotificacaoToast(mensagemTexto, tipoNotificacao = 'info') {
+  const meiasContentor = document.getElementById('toast-container');
+  if (!meiasContentor) return;
+
+  const elementoToast = document.createElement('div');
+  elementoToast.className = `toast toast-${tipoNotificacao}`;
+  elementoToast.innerText = mensagemTexto;
+  meiasContentor.appendChild(elementoToast);
+
   setTimeout(() => {
-    toast.remove();
+    elementoToast.remove();
   }, 4000);
 }
 
-// Auxiliar de Requisições à API REST (Fetch)
-async function apiFetch(url, options = {}) {
-  const headers = {
+// ==========================================
+// REQUISIÇÕES HTTP À API REST (FETCH WRAPPER)
+// ==========================================
+
+/**
+ * Executa requisições HTTP para a API REST incluindo automaticamente o Token JWT.
+ * 
+ * @param {string} caminhoUrl - Endpoint relativo da API (ex: '/api/expedientes')
+ * @param {Object} opcoesRequisicao - Opções da requisição Fetch (method, body, headers)
+ * @returns {Promise<Object>} Resposta JSON parsed da API
+ */
+async function executarRequisicaoApi(caminhoUrl, opcoesRequisicao = {}) {
+  const cabecalhosRequisicao = {
     'Content-Type': 'application/json',
-    ...(currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {}),
-    ...(options.headers || {})
+    ...(tokenAutenticacaoAtual ? { 'Authorization': `Bearer ${tokenAutenticacaoAtual}` } : {}),
+    ...(opcoesRequisicao.headers || {})
   };
 
-  const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
+  const urlCompleta = caminhoUrl.startsWith('http') ? caminhoUrl : `${URL_BASE_API}${caminhoUrl}`;
 
   try {
-    const res = await fetch(fullUrl, { ...options, headers });
-    const data = await res.json();
-    if (!res.ok) {
-      if (res.status === 401 || res.status === 403) {
-        if (url !== '/api/auth/login') {
-          showToast(data.message || 'Sessão expirada ou sem permissão.', 'error');
+    const respostaHttp = await fetch(urlCompleta, { ...opcoesRequisicao, headers: cabecalhosRequisicao });
+    const dadosResposta = await respostaHttp.json();
+
+    if (!respostaHttp.ok) {
+      if (respostaHttp.status === 401 || respostaHttp.status === 403) {
+        if (caminhoUrl !== '/api/auth/login') {
+          exibirNotificacaoToast(dadosResposta.message || 'Sessão expirada ou sem permissão.', 'error');
         }
       }
-      throw new Error(data.message || 'Erro no servidor.');
+      throw new Error(dadosResposta.message || 'Erro de comunicação com o servidor.');
     }
-    return data;
-  } catch (err) {
-    console.error('Erro na requisição API:', err);
-    throw err;
+    return dadosResposta;
+  } catch (erroRequisicao) {
+    console.error('Erro na requisição à API:', erroRequisicao);
+    throw erroRequisicao;
   }
 }
 
-// Controladores de Autenticação (Login e Perfil)
-async function handleLogin(e) {
-  e.preventDefault();
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
+// ==========================================
+// CONTROLADORES DE AUTENTICAÇÃO E SESSÃO
+// ==========================================
+
+/**
+ * Processa a submissão do formulário de login.
+ * 
+ * @param {Event} evento - Evento de submit do formulário
+ */
+async function tratarSubmissaoLogin(evento) {
+  evento.preventDefault();
+  const emailUtilizador = document.getElementById('login-email').value;
+  const palavraPasseUtilizador = document.getElementById('login-password').value;
 
   try {
-    const data = await apiFetch('/api/auth/login', {
+    const dadosAutenticacao = await executarRequisicaoApi('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email: emailUtilizador, password: palavraPasseUtilizador })
     });
 
-    currentToken = data.token;
-    localStorage.setItem('sge_token', currentToken);
-    currentUser = data.user;
+    tokenAutenticacaoAtual = dadosAutenticacao.token;
+    localStorage.setItem('sge_token', tokenAutenticacaoAtual);
+    utilizadorAtual = dadosAutenticacao.user;
 
-    showToast('Login efetuado com sucesso!', 'success');
-    showAppLayout();
-  } catch (err) {
-    showToast(err.message, 'error');
+    exibirNotificacaoToast('Login efetuado com sucesso!', 'success');
+    exibirLayoutAplicacao();
+  } catch (erroLogin) {
+    exibirNotificacaoToast(erroLogin.message, 'error');
   }
 }
 
-async function fetchProfile() {
+/**
+ * Consulta a API para validar a sessão ativa e obter os dados do perfil atual.
+ */
+async function carregarPerfilUtilizador() {
   try {
-    const data = await apiFetch('/api/auth/me');
-    currentUser = data.user;
-    showAppLayout();
-  } catch (err) {
-    logout();
+    const dadosPerfil = await executarRequisicaoApi('/api/auth/me');
+    utilizadorAtual = dadosPerfil.user;
+    exibirLayoutAplicacao();
+  } catch (erroPerfil) {
+    encerrarSessao();
   }
 }
 
+/**
+ * Encerra a sessão do utilizador, removendo os tokens salvos e retornando à tela de login.
+ */
 window.logout = function () {
-  currentToken = null;
-  currentUser = null;
+  tokenAutenticacaoAtual = null;
+  utilizadorAtual = null;
   localStorage.removeItem('sge_token');
-  showLogin();
+  exibirTelaLogin();
 };
 
-function showLogin() {
+/**
+ * Exibe o ecrã de login e oculta o layout principal da aplicação.
+ */
+function exibirTelaLogin() {
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app-layout').style.display = 'none';
 }
 
-function showAppLayout() {
+/**
+ * Exibe o layout principal da aplicação e configura o menu de acordo com o perfil RBAC.
+ */
+function exibirLayoutAplicacao() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-layout').style.display = 'flex';
 
-  // Renderizar Informações do Utilizador no Menu Lateral e Cabeçalho
-  document.getElementById('user-name-display').innerText = currentUser.name;
-  const welcomeTitle = document.getElementById('welcome-user-title');
-  if (welcomeTitle) welcomeTitle.innerText = `Bem-vindo, ${currentUser.name}`;
-  const welcomeRole = document.getElementById('welcome-user-role');
-  if (welcomeRole) welcomeRole.innerText = `Perfil activo: ${currentUser.role_name.toUpperCase()}`;
+  // Renderizar o nome e o perfil do utilizador na barra lateral e cabeçalho
+  document.getElementById('user-name-display').innerText = utilizadorAtual.name;
+  const tituloBoasVindas = document.getElementById('welcome-user-title');
+  if (tituloBoasVindas) tituloBoasVindas.innerText = `Bem-vindo, ${utilizadorAtual.name}`;
+  const subtituloPerfil = document.getElementById('welcome-user-role');
+  if (subtituloPerfil) subtituloPerfil.innerText = `Perfil ativo: ${utilizadorAtual.role_name.toUpperCase()}`;
 
-  const userAvatar = document.getElementById('user-avatar');
-  if (userAvatar) {
-    userAvatar.innerHTML = `${currentUser.name.charAt(0).toUpperCase()}<span class="avatar-status-dot"></span>`;
+  const avatarUtilizador = document.getElementById('user-avatar');
+  if (avatarUtilizador) {
+    avatarUtilizador.innerHTML = `${utilizadorAtual.name.charAt(0).toUpperCase()}<span class="avatar-status-dot"></span>`;
   }
-  const roleBadge = document.getElementById('user-role-display');
-  roleBadge.innerText = currentUser.role_name;
 
-  if (currentUser.role_code === 'admin') roleBadge.style.background = '#ef4444';
-  else if (currentUser.role_code === 'gestor') roleBadge.style.background = '#f59e0b';
-  else if (currentUser.role_code === 'tecnico') roleBadge.style.background = '#0f766e';
-  else roleBadge.style.background = '#10b981';
+  const crachaPerfil = document.getElementById('user-role-display');
+  crachaPerfil.innerText = utilizadorAtual.role_name;
 
-  // Aplicar Visibilidade da Navegação Baseada no RBAC
-  const hasUserMgmt = currentUser.role_code === 'admin' || currentUser.permissions.includes('users:manage');
-  const hasRbacMgmt = currentUser.role_code === 'admin' || currentUser.permissions.includes('rbac:manage');
-  const hasAuditView = currentUser.role_code === 'admin' || currentUser.permissions.includes('audit:view');
-  const hasExpCreate = currentUser.role_code === 'admin' || currentUser.permissions.includes('expediente:create');
+  if (utilizadorAtual.role_code === 'admin') crachaPerfil.style.background = '#ef4444';
+  else if (utilizadorAtual.role_code === 'gestor') crachaPerfil.style.background = '#f59e0b';
+  else if (utilizadorAtual.role_code === 'tecnico') crachaPerfil.style.background = '#0f766e';
+  else crachaPerfil.style.background = '#10b981';
 
-  document.getElementById('nav-users').style.display = hasUserMgmt ? 'block' : 'none';
-  document.getElementById('nav-rbac').style.display = hasRbacMgmt ? 'block' : 'none';
-  document.getElementById('nav-audit').style.display = hasAuditView ? 'block' : 'none';
+  // Aplicar regras de visibilidade aos botões e links de acordo com as permissões RBAC
+  const possuiGestaoUtilizadores = utilizadorAtual.role_code === 'admin' || utilizadorAtual.permissions.includes('users:manage');
+  const possuiGestaoRbac = utilizadorAtual.role_code === 'admin' || utilizadorAtual.permissions.includes('rbac:manage');
+  const possuiVisualizacaoAuditoria = utilizadorAtual.role_code === 'admin' || utilizadorAtual.permissions.includes('audit:view');
+  const possuiCriacaoExpedientes = utilizadorAtual.role_code === 'admin' || utilizadorAtual.permissions.includes('expediente:create');
 
-  document.getElementById('btn-new-exp').style.display = hasExpCreate ? 'inline-flex' : 'none';
-  document.getElementById('btn-header-new-exp').style.display = hasExpCreate ? 'inline-flex' : 'none';
+  document.getElementById('nav-users').style.display = possuiGestaoUtilizadores ? 'block' : 'none';
+  document.getElementById('nav-rbac').style.display = possuiGestaoRbac ? 'block' : 'none';
+  document.getElementById('nav-audit').style.display = possuiVisualizacaoAuditoria ? 'block' : 'none';
+
+  document.getElementById('btn-new-exp').style.display = possuiCriacaoExpedientes ? 'inline-flex' : 'none';
+  document.getElementById('btn-header-new-exp').style.display = possuiCriacaoExpedientes ? 'inline-flex' : 'none';
 
   switchTab('dashboard');
-  loadExpedientesData();
+  carregarDadosExpedientes();
 }
 
-// Auxiliar de Alternância do Menu Lateral em Dispositivos Móveis
+/**
+ * Alterna a visibilidade da barra lateral de navegação em ecrãs móveis.
+ */
 window.toggleMobileSidebar = function () {
-  const sidebar = document.getElementById('main-sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
-  if (sidebar && overlay) {
-    sidebar.classList.toggle('mobile-active');
-    overlay.classList.toggle('active');
+  const barraLateral = document.getElementById('main-sidebar');
+  const camadaSobreposicao = document.getElementById('sidebar-overlay');
+  if (barraLateral && camadaSobreposicao) {
+    barraLateral.classList.toggle('mobile-active');
+    camadaSobreposicao.classList.toggle('active');
   }
 };
 
-// Navegação e Alternância de Abas
-window.switchTab = function (tabName) {
-  // Fechar o menu lateral móvel se estiver aberto
-  const sidebar = document.getElementById('main-sidebar');
-  const overlay = document.getElementById('sidebar-overlay');
-  if (sidebar && sidebar.classList.contains('mobile-active')) {
-    sidebar.classList.remove('mobile-active');
-    if (overlay) overlay.classList.remove('active');
+/**
+ * Alterna a aba/secção ativa na navegação da aplicação SPA.
+ * 
+ * @param {string} nomeAba - Identificador da aba ('dashboard', 'expedientes', 'users', 'rbac', 'audit')
+ */
+window.switchTab = function (nomeAba) {
+  // Fechar o menu móvel caso esteja visível
+  const barraLateral = document.getElementById('main-sidebar');
+  const camadaSobreposicao = document.getElementById('sidebar-overlay');
+  if (barraLateral && barraLateral.classList.contains('mobile-active')) {
+    barraLateral.classList.remove('mobile-active');
+    if (camadaSobreposicao) camadaSobreposicao.classList.remove('active');
   }
 
-  const links = document.querySelectorAll('.nav-link');
-  links.forEach(l => l.classList.remove('active'));
+  const linksNavegacao = document.querySelectorAll('.nav-link');
+  linksNavegacao.forEach(link => link.classList.remove('active'));
 
-  const sections = document.querySelectorAll('.view-section');
-  sections.forEach(s => s.classList.remove('active'));
+  const seccoesPagina = document.querySelectorAll('.view-section');
+  seccoesPagina.forEach(sec => sec.classList.remove('active'));
 
-  const titles = {
+  const titulosVistas = {
     'dashboard': 'Dashboard Principal & Indicadores',
     'expedientes': 'Gestão e Tramitação de Expedientes',
     'users': 'Gestão de Utilizadores e Contas',
-    'rbac': 'Matriz de Controle de Acesso (RBAC)',
+    'rbac': 'Matriz de Controlo de Acesso (RBAC)',
     'audit': 'Auditoria de Ações e Relatórios'
   };
 
-  document.getElementById(`view-${tabName}`).classList.add('active');
-  document.getElementById('current-view-title').innerText = titles[tabName] || 'Painel SGE';
+  document.getElementById(`view-${nomeAba}`).classList.add('active');
+  document.getElementById('current-view-title').innerText = titulosVistas[nomeAba] || 'Painel SGE';
 
-  // Encontrar o link de navegação ativo
-  const activeLink = Array.from(links).find(l => l.getAttribute('onclick')?.includes(tabName));
-  if (activeLink) activeLink.classList.add('active');
+  // Destacar o link correspondente no menu
+  const linkAtivo = Array.from(linksNavegacao).find(link => link.getAttribute('onclick')?.includes(nomeAba));
+  if (linkAtivo) linkAtivo.classList.add('active');
 
-  // Carregar dados da secção selecionada
-  if (tabName === 'dashboard') loadDashboardData();
-  else if (tabName === 'expedientes') loadExpedientesData();
-  else if (tabName === 'users') loadUsersData();
-  else if (tabName === 'rbac') loadRbacData();
-  else if (tabName === 'audit') loadAuditData();
+  // Carregar dados da aba selecionada
+  if (nomeAba === 'dashboard') carregarDadosDashboard();
+  else if (nomeAba === 'expedientes') carregarDadosExpedientes();
+  else if (nomeAba === 'users') carregarDadosUtilizadores();
+  else if (nomeAba === 'rbac') carregarDadosRbac();
+  else if (nomeAba === 'audit') carregarDadosAuditoria();
 };
 
+// ==========================================
 // 1. MÓDULO DO DASHBOARD E ESTATÍSTICAS
-async function loadDashboardData() {
+// ==========================================
+
+/**
+ * Consulta a API de estatísticas e atualiza os indicadores do Dashboard.
+ */
+async function carregarDadosDashboard() {
   try {
-    const data = await apiFetch('/api/stats');
-    const stats = data.stats;
+    const respostaStats = await executarRequisicaoApi('/api/stats');
+    const dadosEstatistiscos = respostaStats.stats;
 
-    document.getElementById('kpi-total-exp').innerText = stats.totalExpedientes;
-    document.getElementById('kpi-tramitacao').innerText = stats.emTramitacao;
-    document.getElementById('kpi-deferidos').innerText = stats.deferidos;
-    document.getElementById('kpi-urgentes').innerText = stats.urgentes;
+    document.getElementById('kpi-total-exp').innerText = dadosEstatistiscos.totalExpedientes;
+    document.getElementById('kpi-tramitacao').innerText = dadosEstatistiscos.emTramitacao;
+    document.getElementById('kpi-deferidos').innerText = dadosEstatistiscos.deferidos;
+    document.getElementById('kpi-urgentes').innerText = dadosEstatistiscos.urgentes;
 
-    // Exibir banner de restauro se o utilizador for administrador, onde se faz 
-    const banner = document.getElementById('banner-reset-demo');
-    if (banner) {
-      const isAdmin = currentUser && currentUser.role_code === 'admin';
-      banner.style.display = isAdmin ? 'flex' : 'none';
+    // Exibir o painel de reinicialização apenas para Administradores
+    const bannerReinicializacao = document.getElementById('banner-reset-demo');
+    if (bannerReinicializacao) {
+      const eAdministrador = utilizadorAtual && utilizadorAtual.role_code === 'admin';
+      bannerReinicializacao.style.display = eAdministrador ? 'flex' : 'none';
     }
 
-    renderDashboardCharts(stats);
-  } catch (err) {
-    showToast('Erro ao carregar estatísticas do dashboard', 'error');
+    renderizarGraficosDashboard(dadosEstatistiscos);
+  } catch (erroDashboard) {
+    exibirNotificacaoToast('Erro ao carregar estatísticas do dashboard', 'error');
   }
 }
 
+/**
+ * Solicita a reinicialização dos dados de demonstração à API.
+ */
 window.resetDemoData = async function () {
   if (!confirm('Tem a certeza de que deseja restaurar todos os dados demonstrativos? Esta ação repõe utilizadores, expedientes, tramitações, despachos e logs de auditoria nos valores iniciais.')) {
     return;
   }
   try {
-    showToast('A restaurar dados demonstrativos em todos os módulos...', 'info');
-    await apiFetch('/api/reset-demo', { method: 'POST' });
-    showToast('Dados demonstrativos restaurados com sucesso em todos os módulos!', 'success');
-    // Recarregar TODOS os módulos para refletir os dados restaurados
-    reloadAllModules();
-  } catch (err) {
-    showToast('Erro ao restaurar dados: ' + err.message, 'error');
+    exibirNotificacaoToast('A restaurar dados demonstrativos em todos os módulos...', 'info');
+    await executarRequisicaoApi('/api/reset-demo', { method: 'POST' });
+    exibirNotificacaoToast('Dados demonstrativos restaurados com sucesso!', 'success');
+    recarregarTodosModulos();
+  } catch (erroRestauro) {
+    exibirNotificacaoToast('Erro ao restaurar dados: ' + erroRestauro.message, 'error');
   }
 };
 
-// Recarrega cada secção de módulo que possua carregador de dados
-function reloadAllModules() {
-  loadDashboardData();
-  loadExpedientesData();
-  // Carregar apenas se o utilizador tiver as permissões necessárias
-  if (currentUser) {
-    const perms = currentUser.permissions || [];
-    const isAdmin = currentUser.role_code === 'admin';
-    if (isAdmin || perms.includes('users:manage')) loadUsersData();
-    if (isAdmin || perms.includes('rbac:manage')) loadRbacData();
-    if (isAdmin || perms.includes('audit:view')) loadAuditData();
+/**
+ * Recarrega os dados de todos os módulos visíveis na interface.
+ */
+function recarregarTodosModulos() {
+  carregarDadosDashboard();
+  carregarDadosExpedientes();
+  if (utilizadorAtual) {
+    const listaPermissoes = utilizadorAtual.permissions || [];
+    const eAdministrador = utilizadorAtual.role_code === 'admin';
+    if (eAdministrador || listaPermissoes.includes('users:manage')) carregarDadosUtilizadores();
+    if (eAdministrador || listaPermissoes.includes('rbac:manage')) carregarDadosRbac();
+    if (eAdministrador || listaPermissoes.includes('audit:view')) carregarDadosAuditoria();
   }
 }
 
-function renderDashboardCharts(stats) {
+/**
+ * Renderiza os gráficos interativos de estados e prioridades utilizando a biblioteca Chart.js.
+ * 
+ * @param {Object} dadosEstatistiscos - Dados estatísticos agrupados
+ */
+function renderizarGraficosDashboard(dadosEstatistiscos) {
   try {
     if (typeof Chart === 'undefined') return;
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const textColor = isLight ? '#0f172a' : '#f8fafc';
+    const eTemaClaro = document.documentElement.getAttribute('data-theme') === 'light';
+    const corTexto = eTemaClaro ? '#0f172a' : '#f8fafc';
 
     // Gráfico 1: Expedientes por Estado
-    const canvasStatus = document.getElementById('chart-status');
-    if (canvasStatus) {
-      const ctxStatus = canvasStatus.getContext('2d');
-      if (statusChartInstance) statusChartInstance.destroy();
+    const elementoCanvasEstados = document.getElementById('chart-status');
+    if (elementoCanvasEstados) {
+      const contextoEstados = elementoCanvasEstados.getContext('2d');
+      if (instanciaGraficoEstados) instanciaGraficoEstados.destroy();
 
-      statusChartInstance = new Chart(ctxStatus, {
+      instanciaGraficoEstados = new Chart(contextoEstados, {
         type: 'bar',
         data: {
-          labels: Object.keys(stats.byStatus),
+          labels: Object.keys(dadosEstatistiscos.byStatus),
           datasets: [{
             label: 'Quantidade de Expedientes',
-            data: Object.values(stats.byStatus),
+            data: Object.values(dadosEstatistiscos.byStatus),
             backgroundColor: ['#0f766e', '#f59e0b', '#10b981', '#ef4444', '#64748b'],
             borderRadius: 6
           }]
@@ -314,25 +421,25 @@ function renderDashboardCharts(stats) {
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { ticks: { color: textColor } },
-            y: { ticks: { color: textColor, precision: 0 } }
+            x: { ticks: { color: corTexto } },
+            y: { ticks: { color: corTexto, precision: 0 } }
           }
         }
       });
     }
 
     // Gráfico 2: Expedientes por Prioridade
-    const canvasPriority = document.getElementById('chart-priority');
-    if (canvasPriority) {
-      const ctxPriority = canvasPriority.getContext('2d');
-      if (priorityChartInstance) priorityChartInstance.destroy();
+    const elementoCanvasPrioridades = document.getElementById('chart-priority');
+    if (elementoCanvasPrioridades) {
+      const contextoPrioridades = elementoCanvasPrioridades.getContext('2d');
+      if (instanciaGraficoPrioridades) instanciaGraficoPrioridades.destroy();
 
-      priorityChartInstance = new Chart(ctxPriority, {
+      instanciaGraficoPrioridades = new Chart(contextoPrioridades, {
         type: 'doughnut',
         data: {
-          labels: Object.keys(stats.byPriority),
+          labels: Object.keys(dadosEstatistiscos.byPriority),
           datasets: [{
-            data: Object.values(stats.byPriority),
+            data: Object.values(dadosEstatistiscos.byPriority),
             backgroundColor: ['#34d399', '#fbbf24', '#f87171', '#c084fc']
           }]
         },
@@ -340,224 +447,247 @@ function renderDashboardCharts(stats) {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom', labels: { color: textColor } }
+            legend: { position: 'bottom', labels: { color: corTexto } }
           }
         }
       });
     }
-  } catch (chartErr) {
-    console.warn('Erro ao renderizar gráficos:', chartErr);
+  } catch (erroGrafico) {
+    console.warn('Erro ao renderizar gráficos:', erroGrafico);
   }
 }
 
+// ==========================================
 // 2. MÓDULO DE GESTÃO DE EXPEDIENTES
-async function loadExpedientesData() {
+// ==========================================
+
+/**
+ * Consulta a API de expedientes e armazena os resultados na cache em memória.
+ */
+async function carregarDadosExpedientes() {
   try {
-    const data = await apiFetch('/api/expedientes');
-    cachedExpedientes = data.expedientes;
-    renderExpedientesTable(cachedExpedientes);
-  } catch (err) {
-    showToast('Erro ao carregar lista de expedientes', 'error');
+    const dadosRecebidos = await executarRequisicaoApi('/api/expedientes');
+    expedientesEmMemoria = dadosRecebidos.expedientes;
+    renderizarTabelaExpedientes(expedientesEmMemoria);
+  } catch (erroExpedientes) {
+    exibirNotificacaoToast('Erro ao carregar lista de expedientes', 'error');
   }
 }
 
-function renderExpedientesTable(list) {
-  const tbody = document.getElementById('tbody-expedientes');
-  tbody.innerHTML = '';
+/**
+ * Renderiza a tabela de expedientes na interface.
+ * 
+ * @param {Array<Object>} listaExpedientes - Coleção de expedientes a serem listados
+ */
+function renderizarTabelaExpedientes(listaExpedientes) {
+  const corpoTabela = document.getElementById('tbody-expedientes');
+  corpoTabela.innerHTML = '';
 
-  if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">Nenhum expediente encontrado.</td></tr>`;
+  if (!listaExpedientes.length) {
+    corpoTabela.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">Nenhum expediente encontrado.</td></tr>`;
     return;
   }
 
-  const perms = currentUser.permissions || [];
-  const isAdmin = currentUser.role_code === 'admin';
-  const canTramitar = isAdmin || perms.includes('expediente:tramitar');
-  const canDespachar = isAdmin || perms.includes('expediente:despachar');
-  const canArquivar = isAdmin || perms.includes('expediente:arquivar');
+  const permissoesUtilizador = utilizadorAtual.permissions || [];
+  const eAdministrador = utilizadorAtual.role_code === 'admin';
+  const podeTramitar = eAdministrador || permissoesUtilizador.includes('expediente:tramitar');
+  const podeDespachar = eAdministrador || permissoesUtilizador.includes('expediente:despachar');
+  const podeArquivar = eAdministrador || permissoesUtilizador.includes('expediente:arquivar');
 
-  list.forEach(exp => {
-    const tr = document.createElement('tr');
+  listaExpedientes.forEach(expediente => {
+    const linhaTabela = document.createElement('tr');
 
-    // Classe do Emblema de Estado
-    let statusClass = 'badge-entrada';
-    if (exp.status === 'Em Tramitação') statusClass = 'badge-tramitacao';
-    else if (exp.status === 'Deferido') statusClass = 'badge-deferido';
-    else if (exp.status === 'Indeferido') statusClass = 'badge-indeferido';
-    else if (exp.status === 'Arquivado') statusClass = 'badge-arquivado';
+    // Determinar estilo visual do crachá de estado
+    let classeEstado = 'badge-entrada';
+    if (expediente.status === 'Em Tramitação') classeEstado = 'badge-tramitacao';
+    else if (expediente.status === 'Deferido') classeEstado = 'badge-deferido';
+    else if (expediente.status === 'Indeferido') classeEstado = 'badge-indeferido';
+    else if (expediente.status === 'Arquivado') classeEstado = 'badge-arquivado';
 
-    // Emblema de Prioridade
-    let priorityClass = `badge-${exp.priority.toLowerCase()}`;
+    // Determinar estilo visual da prioridade
+    let classePrioridade = `badge-${expediente.priority.toLowerCase()}`;
 
-    // Emblema de Confidencialidade
-    let confBadge = exp.confidentiality === 'Confidencial'
+    // Determinar crachá de confidencialidade
+    let crachaConfidencialidade = expediente.confidentiality === 'Confidencial'
       ? `<span class="badge badge-confidential"><i class="ri-lock-2-line"></i> Confidencial</span>`
-      : `<span class="badge badge-public">${exp.confidentiality}</span>`;
+      : `<span class="badge badge-public">${expediente.confidentiality}</span>`;
 
-    const isClosed = exp.status === 'Arquivado';
+    const estaEncerrado = expediente.status === 'Arquivado';
 
-    tr.innerHTML = `
-      <td><strong>${exp.nup}</strong></td>
+    linhaTabela.innerHTML = `
+      <td><strong>${expediente.nup}</strong></td>
       <td>
-        <div style="font-weight: 600;">${exp.title}</div>
-        <div style="font-size: 0.78rem; color: var(--text-muted);"><i class="ri-user-line"></i> ${exp.applicant}</div>
+        <div style="font-weight: 600;">${expediente.title}</div>
+        <div style="font-size: 0.78rem; color: var(--text-muted);"><i class="ri-user-line"></i> ${expediente.applicant}</div>
       </td>
-      <td><span class="badge ${priorityClass}">${exp.priority}</span></td>
-      <td>${confBadge}</td>
-      <td><i class="ri-building-4-line"></i> ${exp.current_department}</td>
-      <td><span class="badge ${statusClass}">${exp.status}</span></td>
+      <td><span class="badge ${classePrioridade}">${expediente.priority}</span></td>
+      <td>${crachaConfidencialidade}</td>
+      <td><i class="ri-building-4-line"></i> ${expediente.current_department}</td>
+      <td><span class="badge ${classeEstado}">${expediente.status}</span></td>
       <td>
         <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="viewExpedientDetails(${exp.id})" title="Ver Detalhes e Histórico">
+          <button class="btn btn-secondary btn-sm" onclick="viewExpedientDetails(${expediente.id})" title="Ver Detalhes e Histórico">
             <i class="ri-eye-line"></i>
           </button>
-          ${canTramitar && !isClosed ? `
-            <button class="btn btn-primary btn-sm" onclick="openTramitarModal(${exp.id})" title="Tramitar / Encaminhar">
+          ${podeTramitar && !estaEncerrado ? `
+            <button class="btn btn-primary btn-sm" onclick="openTramitarModal(${expediente.id})" title="Tramitar / Encaminhar">
               <i class="ri-route-line"></i>
             </button>
           ` : ''}
-          ${canDespachar && !isClosed ? `
-            <button class="btn btn-success btn-sm" onclick="openDespachoModal(${exp.id})" title="Emitir Despacho">
+          ${podeDespachar && !estaEncerrado ? `
+            <button class="btn btn-success btn-sm" onclick="openDespachoModal(${expediente.id})" title="Emitir Despacho">
               <i class="ri-quill-pen-line"></i>
             </button>
           ` : ''}
-          ${canArquivar && !isClosed ? `
-            <button class="btn btn-warning btn-sm" onclick="openArquivarModal(${exp.id})" title="Arquivar">
+          ${podeArquivar && !estaEncerrado ? `
+            <button class="btn btn-warning btn-sm" onclick="openArquivarModal(${expediente.id})" title="Arquivar">
               <i class="ri-archive-line"></i>
             </button>
           ` : ''}
         </div>
       </td>
     `;
-    tbody.appendChild(tr);
+    corpoTabela.appendChild(linhaTabela);
   });
 }
 
+/**
+ * Filtra a lista de expedientes em tempo real por NUP, título, requerente ou estado.
+ */
 window.filterExpedientes = function () {
-  const searchInput = document.getElementById('search-expedientes');
-  const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
-  const statusSelect = document.getElementById('filter-status');
-  const statusFilter = statusSelect ? statusSelect.value : '';
+  const campoPesquisa = document.getElementById('search-expedientes');
+  const termoPesquisa = (campoPesquisa ? campoPesquisa.value : '').toLowerCase().trim();
+  const seletorEstado = document.getElementById('filter-status');
+  const filtroEstado = seletorEstado ? seletorEstado.value : '';
 
-  if (!cachedExpedientes || !cachedExpedientes.length) {
-    loadExpedientesData();
+  if (!expedientesEmMemoria || !expedientesEmMemoria.length) {
+    carregarDadosExpedientes();
     return;
   }
 
-  const filtered = cachedExpedientes.filter(exp => {
-    const nup = (exp.nup || '').toLowerCase();
-    const title = (exp.title || '').toLowerCase();
-    const applicant = (exp.applicant || '').toLowerCase();
-    const matchesSearch = !query || nup.includes(query) || title.includes(query) || applicant.includes(query);
-    const matchesStatus = !statusFilter || exp.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  const expedientesFiltrados = expedientesEmMemoria.filter(expediente => {
+    const nup = (expediente.nup || '').toLowerCase();
+    const titulo = (expediente.title || '').toLowerCase();
+    const requerente = (expediente.applicant || '').toLowerCase();
+    const correspondePesquisa = !termoPesquisa || nup.includes(termoPesquisa) || titulo.includes(termoPesquisa) || requerente.includes(termoPesquisa);
+    const correspondeEstado = !filtroEstado || expediente.status === filtroEstado;
+    return correspondePesquisa && correspondeEstado;
   });
 
-  renderExpedientesTable(filtered);
+  renderizarTabelaExpedientes(expedientesFiltrados);
 };
 
-// Modal de Detalhes do Expediente e Linha do Tempo
-window.viewExpedientDetails = async function (id) {
+/**
+ * Carrega e exibe os detalhes completos de um expediente no modal de visualização.
+ * 
+ * @param {number|string} idExpediente - ID do expediente a visualizar
+ */
+window.viewExpedientDetails = async function (idExpediente) {
   try {
-    const data = await apiFetch(`/api/expedientes/${id}`);
-    const exp = data.expedient;
+    const respostaExpediente = await executarRequisicaoApi(`/api/expedientes/${idExpediente}`);
+    const expediente = respostaExpediente.expedient;
 
-    document.getElementById('view-exp-nup').innerText = `${exp.nup} - ${exp.title}`;
+    document.getElementById('view-exp-nup').innerText = `${expediente.nup} - ${expediente.title}`;
 
-    let tramitacoesHTML = '';
-    if (exp.tramitacoes && exp.tramitacoes.length) {
-      tramitacoesHTML = exp.tramitacoes.map(t => `
+    // Construção da linha do tempo de tramitações
+    let htmlTramitacoes = '';
+    if (expediente.tramitacoes && expediente.tramitacoes.length) {
+      htmlTramitacoes = expediente.tramitacoes.map(tramitacao => `
         <div class="timeline-item">
-          <div class="timeline-date">${new Date(t.created_at).toLocaleString('pt-PT')}</div>
-          <div class="timeline-title">${t.from_department} &rarr; ${t.to_department}</div>
+          <div class="timeline-date">${new Date(tramitacao.created_at).toLocaleString('pt-PT')}</div>
+          <div class="timeline-title">${tramitacao.from_department} &rarr; ${tramitacao.to_department}</div>
           <div class="timeline-body">
-            <div><strong>Responsável:</strong> ${t.user_name} (${t.user_role})</div>
-            <div style="margin-top: 0.25rem;"><strong>Parecer / Instruções:</strong> ${t.opinion}</div>
+            <div><strong>Responsável:</strong> ${tramitacao.user_name} (${tramitacao.user_role})</div>
+            <div style="margin-top: 0.25rem;"><strong>Parecer / Instruções:</strong> ${tramitacao.opinion}</div>
           </div>
         </div>
       `).join('');
     } else {
-      tramitacoesHTML = `<p style="font-size: 0.85rem; color: var(--text-muted);">Nenhuma tramitação efetuada até ao momento.</p>`;
+      htmlTramitacoes = `<p style="font-size: 0.85rem; color: var(--text-muted);">Nenhuma tramitação efetuada até ao momento.</p>`;
     }
 
-    let despachosHTML = '';
-    if (exp.despachos && exp.despachos.length) {
-      despachosHTML = exp.despachos.map(d => `
+    // Construção do histórico de despachos
+    let htmlDespachos = '';
+    if (expediente.despachos && expediente.despachos.length) {
+      htmlDespachos = expediente.despachos.map(despacho => `
         <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 0.85rem; margin-bottom: 0.75rem;">
           <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #34d399;">
-            <span><i class="ri-check-double-line"></i> DESPACHO: ${d.decision}</span>
-            <span>${new Date(d.created_at).toLocaleString('pt-PT')}</span>
+            <span><i class="ri-check-double-line"></i> DESPACHO: ${despacho.decision}</span>
+            <span>${new Date(despacho.created_at).toLocaleString('pt-PT')}</span>
           </div>
-          <div style="font-size: 0.85rem; margin-top: 0.4rem;">${d.justification}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem;">Assinado por: ${d.user_name} (${d.user_role})</div>
+          <div style="font-size: 0.85rem; margin-top: 0.4rem;">${despacho.justification}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem;">Assinado por: ${despacho.user_name} (${despacho.user_role})</div>
         </div>
       `).join('');
     } else {
-      despachosHTML = `<p style="font-size: 0.85rem; color: var(--text-muted);">Nenhum despacho emitido.</p>`;
+      htmlDespachos = `<p style="font-size: 0.85rem; color: var(--text-muted);">Nenhum despacho emitido.</p>`;
     }
 
-    const html = `
+    const htmlDetalhes = `
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; background: var(--bg-primary); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
         <div>
           <div style="font-size: 0.75rem; color: var(--text-muted);">Requerente</div>
-          <div style="font-weight: 700;">${exp.applicant}</div>
+          <div style="font-weight: 700;">${expediente.applicant}</div>
         </div>
         <div>
           <div style="font-size: 0.75rem; color: var(--text-muted);">Estado Atual</div>
-          <div style="font-weight: 700;">${exp.status} (${exp.current_department})</div>
+          <div style="font-weight: 700;">${expediente.status} (${expediente.current_department})</div>
         </div>
         <div>
           <div style="font-size: 0.75rem; color: var(--text-muted);">Prioridade / Confidencialidade</div>
-          <div style="font-weight: 700;">${exp.priority} | ${exp.confidentiality}</div>
+          <div style="font-weight: 700;">${expediente.priority} | ${expediente.confidentiality}</div>
         </div>
         <div>
           <div style="font-size: 0.75rem; color: var(--text-muted);">Data de Entrada</div>
-          <div style="font-weight: 700;">${new Date(exp.created_at).toLocaleString('pt-PT')}</div>
+          <div style="font-weight: 700;">${new Date(expediente.created_at).toLocaleString('pt-PT')}</div>
         </div>
       </div>
 
       <div style="margin-bottom: 1.25rem;">
         <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem;"><i class="ri-align-left"></i> Assunto / Descrição</h4>
         <div style="background: var(--bg-primary); padding: 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.9rem;">
-          ${exp.subject}
+          ${expediente.subject}
         </div>
       </div>
 
-      ${exp.archived_location ? `
+      ${expediente.archived_location ? `
         <div style="margin-bottom: 1.25rem; background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem;">
-          <strong><i class="ri-archive-line"></i> Localização no Arquivo:</strong> ${exp.archived_location}
+          <strong><i class="ri-archive-line"></i> Localização no Arquivo:</strong> ${expediente.archived_location}
         </div>
       ` : ''}
 
       <div style="margin-bottom: 1.25rem;">
         <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem;"><i class="ri-quill-pen-line"></i> Despachos Decisórios</h4>
-        ${despachosHTML}
+        ${htmlDespachos}
       </div>
 
       <div>
         <h4 style="font-size: 0.95rem; margin-bottom: 0.5rem;"><i class="ri-route-line"></i> Histórico de Tramitações</h4>
         <div class="timeline">
-          ${tramitacoesHTML}
+          ${htmlTramitacoes}
         </div>
       </div>
     `;
 
-    document.getElementById('view-exp-content').innerHTML = html;
-    openModal('modal-view-exp');
-  } catch (err) {
-    showToast(err.message, 'error');
+    document.getElementById('view-exp-content').innerHTML = htmlDetalhes;
+    abrirModal('modal-view-exp');
+  } catch (erroDetalhes) {
+    exibirNotificacaoToast(erroDetalhes.message, 'error');
   }
 };
 
-// Ações do Expediente (Tramitar, Despachar, Arquivar)
+// Modais e Manipulação de Ações do Expediente
 window.openNewExpedientModal = function () {
   document.getElementById('form-new-exp').reset();
-  openModal('modal-new-exp');
+  abrirModal('modal-new-exp');
 };
 
-async function handleCreateExpedient(e) {
-  e.preventDefault();
-  const body = {
+/**
+ * Trata o registo de um novo expediente via formulário.
+ */
+async function tratarCriacaoExpediente(evento) {
+  evento.preventDefault();
+  const dadosFormulario = {
     title: document.getElementById('exp-title').value,
     applicant: document.getElementById('exp-applicant').value,
     current_department: document.getElementById('exp-dept').value,
@@ -567,377 +697,460 @@ async function handleCreateExpedient(e) {
   };
 
   try {
-    await apiFetch('/api/expedientes', {
+    await executarRequisicaoApi('/api/expedientes', {
       method: 'POST',
-      body: JSON.stringify(body)
+      body: JSON.stringify(dadosFormulario)
     });
-    showToast('Expediente criado com sucesso!', 'success');
-    closeModal('modal-new-exp');
-    loadExpedientesData();
-  } catch (err) {
-    showToast(err.message, 'error');
+    exibirNotificacaoToast('Expediente criado com sucesso!', 'success');
+    fecharModal('modal-new-exp');
+    carregarDadosExpedientes();
+  } catch (erroCriacao) {
+    exibirNotificacaoToast(erroCriacao.message, 'error');
   }
 }
 
-window.openTramitarModal = function (id) {
-  document.getElementById('tramitar-exp-id').value = id;
+window.openTramitarModal = function (idExpediente) {
+  document.getElementById('tramitar-exp-id').value = idExpediente;
   document.getElementById('form-tramitar').reset();
-  openModal('modal-tramitar');
+  abrirModal('modal-tramitar');
 };
 
-async function handleTramitarSubmit(e) {
-  e.preventDefault();
-  const id = document.getElementById('tramitar-exp-id').value;
-  const body = {
+/**
+ * Trata o envio do formulário de tramitação de um expediente.
+ */
+async function tratarSubmissaoTramitacao(evento) {
+  evento.preventDefault();
+  const idExpediente = document.getElementById('tramitar-exp-id').value;
+  const dadosTramitacao = {
     to_department: document.getElementById('tramitar-to-dept').value,
     opinion: document.getElementById('tramitar-opinion').value
   };
 
   try {
-    await apiFetch(`/api/expedientes/${id}/tramitar`, {
+    await executarRequisicaoApi(`/api/expedientes/${idExpediente}/tramitar`, {
       method: 'POST',
-      body: JSON.stringify(body)
+      body: JSON.stringify(dadosTramitacao)
     });
-    showToast('Tramitação concluída com sucesso!', 'success');
-    closeModal('modal-tramitar');
-    loadExpedientesData();
-  } catch (err) {
-    showToast(err.message, 'error');
+    exibirNotificacaoToast('Tramitação concluída com sucesso!', 'success');
+    fecharModal('modal-tramitar');
+    carregarDadosExpedientes();
+  } catch (erroTramitacao) {
+    exibirNotificacaoToast(erroTramitacao.message, 'error');
   }
 }
 
-window.openDespachoModal = function (id) {
-  document.getElementById('despacho-exp-id').value = id;
+window.openDespachoModal = function (idExpediente) {
+  document.getElementById('despacho-exp-id').value = idExpediente;
   document.getElementById('form-despacho').reset();
-  openModal('modal-despacho');
+  abrirModal('modal-despacho');
 };
 
-async function handleDespachoSubmit(e) {
-  e.preventDefault();
-  const id = document.getElementById('despacho-exp-id').value;
-  const body = {
+/**
+ * Trata a emissão de despacho decisório para um expediente.
+ */
+async function tratarSubmissaoDespacho(evento) {
+  evento.preventDefault();
+  const idExpediente = document.getElementById('despacho-exp-id').value;
+  const dadosDespacho = {
     decision: document.getElementById('despacho-decision').value,
     justification: document.getElementById('despacho-justification').value
   };
 
   try {
-    await apiFetch(`/api/expedientes/${id}/despachar`, {
+    await executarRequisicaoApi(`/api/expedientes/${idExpediente}/despachar`, {
       method: 'POST',
-      body: JSON.stringify(body)
+      body: JSON.stringify(dadosDespacho)
     });
-    showToast('Despacho assinado e emitido com sucesso!', 'success');
-    closeModal('modal-despacho');
-    loadExpedientesData();
-  } catch (err) {
-    showToast(err.message, 'error');
+    exibirNotificacaoToast('Despacho assinado e emitido com sucesso!', 'success');
+    fecharModal('modal-despacho');
+    carregarDadosExpedientes();
+  } catch (erroDespacho) {
+    exibirNotificacaoToast(erroDespacho.message, 'error');
   }
 }
 
-window.openArquivarModal = function (id) {
-  document.getElementById('arquivar-exp-id').value = id;
+window.openArquivarModal = function (idExpediente) {
+  document.getElementById('arquivar-exp-id').value = idExpediente;
   document.getElementById('form-arquivar').reset();
-  openModal('modal-arquivar');
+  abrirModal('modal-arquivar');
 };
 
-async function handleArquivarSubmit(e) {
-  e.preventDefault();
-  const id = document.getElementById('arquivar-exp-id').value;
-  const body = {
+/**
+ * Trata a confirmação de arquivamento físico de um expediente.
+ */
+async function tratarSubmissaoArquivamento(evento) {
+  evento.preventDefault();
+  const idExpediente = document.getElementById('arquivar-exp-id').value;
+  const dadosArquivamento = {
     location: document.getElementById('arquivar-location').value
   };
 
   try {
-    await apiFetch(`/api/expedientes/${id}/arquivar`, {
+    await executarRequisicaoApi(`/api/expedientes/${idExpediente}/arquivar`, {
       method: 'POST',
-      body: JSON.stringify(body)
+      body: JSON.stringify(dadosArquivamento)
     });
-    showToast('Expediente arquivado com sucesso!', 'success');
-    closeModal('modal-arquivar');
-    loadExpedientesData();
-  } catch (err) {
-    showToast(err.message, 'error');
+    exibirNotificacaoToast('Expediente arquivado com sucesso!', 'success');
+    fecharModal('modal-arquivar');
+    carregarDadosExpedientes();
+  } catch (erroArquivamento) {
+    exibirNotificacaoToast(erroArquivamento.message, 'error');
   }
 }
 
+// ==========================================
 // 3. MÓDULO DE GESTÃO DE UTILIZADORES
-async function loadUsersData() {
+// ==========================================
+
+/**
+ * Carrega a lista de utilizadores cadastrados na API.
+ */
+async function carregarDadosUtilizadores() {
   try {
-    const data = await apiFetch('/api/users');
-    renderUsersTable(data.users);
-  } catch (err) {
-    showToast('Erro ao carregar utilizadores', 'error');
+    const dadosUtilizadores = await executarRequisicaoApi('/api/users');
+    renderizarTabelaUtilizadores(dadosUtilizadores.users);
+  } catch (erroUtilizadores) {
+    exibirNotificacaoToast('Erro ao carregar utilizadores', 'error');
   }
 }
 
-function renderUsersTable(users) {
-  const tbody = document.getElementById('tbody-users');
-  tbody.innerHTML = '';
+/**
+ * Renderiza a tabela de utilizadores no painel de administração.
+ * 
+ * @param {Array<Object>} listaUtilizadores - Lista de utilizadores retornada da API
+ */
+function renderizarTabelaUtilizadores(listaUtilizadores) {
+  const corpoTabela = document.getElementById('tbody-users');
+  corpoTabela.innerHTML = '';
 
-  users.forEach(u => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${u.id}</td>
-      <td><strong>${u.name}</strong></td>
-      <td>${u.email}</td>
-      <td>${u.department}</td>
-      <td><span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">${u.role_name}</span></td>
+  listaUtilizadores.forEach(utilizador => {
+    const linhaTabela = document.createElement('tr');
+    linhaTabela.innerHTML = `
+      <td>${utilizador.id}</td>
+      <td><strong>${utilizador.name}</strong></td>
+      <td>${utilizador.email}</td>
+      <td>${utilizador.department}</td>
+      <td><span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">${utilizador.role_name}</span></td>
       <td>
-        <span class="badge ${u.active ? 'badge-deferido' : 'badge-indeferido'}">
-          ${u.active ? 'Ativo' : 'Inativo'}
+        <span class="badge ${utilizador.active ? 'badge-deferido' : 'badge-indeferido'}">
+          ${utilizador.active ? 'Ativo' : 'Inativo'}
         </span>
       </td>
       <td>
-        <button class="btn btn-secondary btn-sm" onclick="editUser(${u.id}, '${escapeHtml(u.name)}', '${u.email}', ${u.role_id}, '${escapeHtml(u.department)}')">
+        <button class="btn btn-secondary btn-sm" onclick="editUser(${utilizador.id}, '${escaparHtml(utilizador.name)}', '${utilizador.email}', ${utilizador.role_id}, '${escaparHtml(utilizador.department)}')">
           <i class="ri-edit-line"></i> Editar
         </button>
       </td>
     `;
-    tbody.appendChild(tr);
+    corpoTabela.appendChild(linhaTabela);
   });
 }
 
-function escapeHtml(str) {
-  return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+/**
+ * Escapa aspas e caracteres especiais para injeção segura em strings HTML inline.
+ * 
+ * @param {string} textoBruto - Texto a ser escapado
+ */
+function escaparHtml(textoBruto) {
+  return (textoBruto || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
 window.openUserModal = function () {
   document.getElementById('modal-user-title').innerText = 'Adicionar Novo Utilizador';
   document.getElementById('user-id').value = '';
   document.getElementById('form-user').reset();
-  openModal('modal-user');
+  abrirModal('modal-user');
 };
 
-window.editUser = function (id, name, email, roleId, department) {
+window.editUser = function (idUtilizador, nome, email, idPerfil, departamento) {
   document.getElementById('modal-user-title').innerText = 'Editar Utilizador';
-  document.getElementById('user-id').value = id;
-  document.getElementById('user-name').value = name;
+  document.getElementById('user-id').value = idUtilizador;
+  document.getElementById('user-name').value = nome;
   document.getElementById('user-email').value = email;
   document.getElementById('user-password').value = '';
-  document.getElementById('user-role-select').value = roleId;
-  document.getElementById('user-department').value = department;
-  openModal('modal-user');
+  document.getElementById('user-role-select').value = idPerfil;
+  document.getElementById('user-department').value = departamento;
+  abrirModal('modal-user');
 };
 
-async function handleUserSubmit(e) {
-  e.preventDefault();
-  const id = document.getElementById('user-id').value;
-  const body = {
+/**
+ * Processa a criação ou edição de um utilizador via formulário.
+ */
+async function tratarSubmissaoUtilizador(evento) {
+  evento.preventDefault();
+  const idUtilizador = document.getElementById('user-id').value;
+  const dadosFormulario = {
     name: document.getElementById('user-name').value,
     email: document.getElementById('user-email').value,
     role_id: document.getElementById('user-role-select').value,
     department: document.getElementById('user-department').value
   };
 
-  const pass = document.getElementById('user-password').value;
-  if (pass) body.password = pass;
+  const palavraPasseDigitada = document.getElementById('user-password').value;
+  if (palavraPasseDigitada) dadosFormulario.password = palavraPasseDigitada;
 
   try {
-    if (id) {
-      await apiFetch(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(body) });
-      showToast('Utilizador atualizado com sucesso!', 'success');
+    if (idUtilizador) {
+      await executarRequisicaoApi(`/api/users/${idUtilizador}`, { method: 'PUT', body: JSON.stringify(dadosFormulario) });
+      exibirNotificacaoToast('Utilizador atualizado com sucesso!', 'success');
     } else {
-      if (!pass) {
-        showToast('Insira a palavra-passe para o novo utilizador.', 'error');
+      if (!palavraPasseDigitada) {
+        exibirNotificacaoToast('Insira a palavra-passe para o novo utilizador.', 'error');
         return;
       }
-      body.password = pass;
-      await apiFetch('/api/users', { method: 'POST', body: JSON.stringify(body) });
-      showToast('Utilizador criado com sucesso!', 'success');
+      dadosFormulario.password = palavraPasseDigitada;
+      await executarRequisicaoApi('/api/users', { method: 'POST', body: JSON.stringify(dadosFormulario) });
+      exibirNotificacaoToast('Utilizador criado com sucesso!', 'success');
     }
-    closeModal('modal-user');
-    loadUsersData();
-  } catch (err) {
-    showToast(err.message, 'error');
+    fecharModal('modal-user');
+    carregarDadosUtilizadores();
+  } catch (erroUtilizador) {
+    exibirNotificacaoToast(erroUtilizador.message, 'error');
   }
 }
 
+// ==========================================
 // 4. MÓDULO DE MATRIZ DE PERMISSÕES RBAC
-async function loadRbacData() {
+// ==========================================
+
+/**
+ * Carrega os perfis e permissões para construir a matriz RBAC dinâmica.
+ */
+async function carregarDadosRbac() {
   try {
-    const data = await apiFetch('/api/roles');
-    renderRbacMatrix(data.roles, data.permissions);
-  } catch (err) {
-    showToast('Erro ao carregar Matriz RBAC', 'error');
+    const dadosRbac = await executarRequisicaoApi('/api/roles');
+    renderizarMatrizRbac(dadosRbac.roles, dadosRbac.permissions);
+  } catch (erroRbac) {
+    exibirNotificacaoToast('Erro ao carregar Matriz RBAC', 'error');
   }
 }
 
-function renderRbacMatrix(roles, permissions) {
-  const container = document.getElementById('rbac-matrix-container');
+/**
+ * Renderiza a tabela da matriz RBAC com caixas de seleção (checkboxes) para cada perfil.
+ * 
+ * @param {Array<Object>} perfis - Lista de perfis do sistema
+ * @param {Array<Object>} permissoes - Lista de permissões do catálogo
+ */
+function renderizarMatrizRbac(perfis, permissoes) {
+  const contentorMatriz = document.getElementById('rbac-matrix-container');
 
-  let html = `
+  let htmlMatriz = `
     <table class="custom-table">
       <thead>
         <tr>
           <th>Permissão / Ação do Sistema</th>
-          ${roles.map(r => `<th style="text-align: center; color: ${r.color}">${r.name}</th>`).join('')}
+          ${perfis.map(p => `<th style="text-align: center; color: ${p.color}">${p.name}</th>`).join('')}
         </tr>
       </thead>
       <tbody>
   `;
 
-  permissions.forEach(p => {
-    html += `
+  permissoes.forEach(permissao => {
+    htmlMatriz += `
       <tr>
         <td>
-          <div style="font-weight: 600;">${p.name}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">${p.code} (${p.category})</div>
+          <div style="font-weight: 600;">${permissao.name}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">${permissao.code} (${permissao.category})</div>
         </td>
     `;
 
-    roles.forEach(r => {
-      const hasPerm = r.permissions.some(rp => rp.id === p.id);
-      const isAdmin = r.code === 'admin';
-      html += `
+    perfis.forEach(perfil => {
+      const possuiPermissao = perfil.permissions.some(permPerfil => permPerfil.id === permissao.id);
+      const eAdministrador = perfil.code === 'admin';
+      htmlMatriz += `
         <td style="text-align: center;">
           <input type="checkbox"
             style="width: 18px; height: 18px; cursor: pointer;"
-            ${hasPerm ? 'checked' : ''}
-            ${isAdmin ? 'disabled' : ''}
-            onchange="toggleRbacPermission(${r.id}, ${p.id}, this.checked)"
+            ${possuiPermissao ? 'checked' : ''}
+            ${eAdministrador ? 'disabled' : ''}
+            onchange="toggleRbacPermission(${perfil.id}, ${permissao.id}, this.checked)"
           >
         </td>
       `;
     });
 
-    html += `</tr>`;
+    htmlMatriz += `</tr>`;
   });
 
-  html += `
+  htmlMatriz += `
       </tbody>
     </table>
   `;
 
-  container.innerHTML = html;
+  contentorMatriz.innerHTML = htmlMatriz;
 }
 
-window.toggleRbacPermission = async function (roleId, permissionId, isChecked) {
+/**
+ * Ativa ou desativa uma permissão específica para um perfil na matriz RBAC.
+ * 
+ * @param {number|string} idPerfil - ID do perfil
+ * @param {number|string} idPermissao - ID da permissão
+ * @param {boolean} eMarcado - Estado da caixa de seleção (true para adicionar, false para remover)
+ */
+window.toggleRbacPermission = async function (idPerfil, idPermissao, eMarcado) {
   try {
-    const data = await apiFetch('/api/roles');
-    const role = data.roles.find(r => r.id === roleId);
-    let permIds = role.permissions.map(p => p.id);
+    const dadosAtuais = await executarRequisicaoApi('/api/roles');
+    const perfilEncontrado = dadosAtuais.roles.find(r => r.id === idPerfil);
+    let idsPermissoes = perfilEncontrado.permissions.map(p => p.id);
 
-    if (isChecked) {
-      if (!permIds.includes(permissionId)) permIds.push(permissionId);
+    if (eMarcado) {
+      if (!idsPermissoes.includes(idPermissao)) idsPermissoes.push(idPermissao);
     } else {
-      permIds = permIds.filter(id => id !== permissionId);
+      idsPermissoes = idsPermissoes.filter(id => id !== idPermissao);
     }
 
-    await apiFetch(`/api/roles/${roleId}/permissions`, {
+    await executarRequisicaoApi(`/api/roles/${idPerfil}/permissions`, {
       method: 'PUT',
-      body: JSON.stringify({ permission_ids: permIds })
+      body: JSON.stringify({ permission_ids: idsPermissoes })
     });
 
-    showToast('Matriz de permissões RBAC atualizada!', 'success');
-  } catch (err) {
-    showToast(err.message, 'error');
-    loadRbacData(); // Recarregar em caso de falha
+    exibirNotificacaoToast('Matriz de permissões RBAC atualizada!', 'success');
+  } catch (erroMatriz) {
+    exibirNotificacaoToast(erroMatriz.message, 'error');
+    carregarDadosRbac();
   }
 };
 
-// 5. MÓDULO DE LOGS DE AUDITORIA
-async function loadAuditData() {
+// ==========================================
+// 5. MÓDULO DE LOGS DE AUDITORIA E RELATÓRIOS
+// ==========================================
+
+/**
+ * Carrega a lista de registos de auditoria registados no sistema.
+ */
+async function carregarDadosAuditoria() {
   try {
-    const data = await apiFetch('/api/audit-logs');
-    cachedAuditLogs = data.logs;
-    renderAuditTable(cachedAuditLogs);
-  } catch (err) {
-    showToast('Erro ao carregar logs de auditoria', 'error');
+    const dadosAuditoria = await executarRequisicaoApi('/api/audit-logs');
+    registosAuditoriaEmMemoria = dadosAuditoria.logs;
+    renderizarTabelaAuditoria(registosAuditoriaEmMemoria);
+  } catch (erroAuditoria) {
+    exibirNotificacaoToast('Erro ao carregar logs de auditoria', 'error');
   }
 }
 
-function renderAuditTable(logs) {
-  const tbody = document.getElementById('tbody-audit');
-  tbody.innerHTML = '';
+/**
+ * Renderiza a tabela de logs de auditoria na interface.
+ * 
+ * @param {Array<Object>} listaLogs - Lista de registos de auditoria
+ */
+function renderizarTabelaAuditoria(listaLogs) {
+  const corpoTabela = document.getElementById('tbody-audit');
+  corpoTabela.innerHTML = '';
 
-  if (!logs.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">Nenhum registo de auditoria.</td></tr>`;
+  if (!listaLogs.length) {
+    corpoTabela.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">Nenhum registo de auditoria.</td></tr>`;
     return;
   }
 
-  logs.forEach(l => {
-    const tr = document.createElement('tr');
-    const statusColor = l.success ? '#10b981' : '#ef4444';
+  listaLogs.forEach(log => {
+    const linhaTabela = document.createElement('tr');
+    const corSucesso = log.success ? '#10b981' : '#ef4444';
 
-    tr.innerHTML = `
-      <td style="font-size: 0.8rem; color: var(--text-muted);">${new Date(l.timestamp).toLocaleString('pt-PT')}</td>
+    linhaTabela.innerHTML = `
+      <td style="font-size: 0.8rem; color: var(--text-muted);">${new Date(log.timestamp).toLocaleString('pt-PT')}</td>
       <td>
-        <div style="font-weight: 600;">${l.user_name}</div>
-        <div style="font-size: 0.75rem; color: var(--text-muted);">${l.user_role}</div>
+        <div style="font-weight: 600;">${log.user_name}</div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">${log.user_role}</div>
       </td>
-      <td><strong style="color: ${statusColor}">${l.action}</strong></td>
-      <td><span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #c084fc;">${l.entity}: ${l.entity_id}</span></td>
-      <td style="font-size: 0.85rem;">${l.details}</td>
-      <td style="font-size: 0.8rem; font-family: monospace;">${l.ip_address}</td>
+      <td><strong style="color: ${corSucesso}">${log.action}</strong></td>
+      <td><span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #c084fc;">${log.entity}: ${log.entity_id}</span></td>
+      <td style="font-size: 0.85rem;">${log.details}</td>
+      <td style="font-size: 0.8rem; font-family: monospace;">${log.ip_address}</td>
     `;
-    tbody.appendChild(tr);
+    corpoTabela.appendChild(linhaTabela);
   });
 }
 
+/**
+ * Filtra a tabela de auditoria em tempo real pelo nome do utilizador, ação ou detalhes.
+ */
 window.filterAuditLogs = function () {
-  const query = document.getElementById('search-audit').value.toLowerCase();
-  const filtered = cachedAuditLogs.filter(l => {
-    return l.user_name.toLowerCase().includes(query) ||
-      l.action.toLowerCase().includes(query) ||
-      l.details.toLowerCase().includes(query) ||
-      l.entity.toLowerCase().includes(query);
+  const campoPesquisa = document.getElementById('search-audit');
+  const termoPesquisa = (campoPesquisa ? campoPesquisa.value : '').toLowerCase().trim();
+
+  const logsFiltrados = registosAuditoriaEmMemoria.filter(log => {
+    return log.user_name.toLowerCase().includes(termoPesquisa) ||
+      log.action.toLowerCase().includes(termoPesquisa) ||
+      log.details.toLowerCase().includes(termoPesquisa) ||
+      log.entity.toLowerCase().includes(termoPesquisa);
   });
-  renderAuditTable(filtered);
+  renderizarTabelaAuditoria(logsFiltrados);
 };
 
+/**
+ * Exporta a lista de registos de auditoria para um ficheiro no formato CSV.
+ */
 window.exportAuditCSV = function () {
-  if (!cachedAuditLogs.length) {
-    showToast('Sem dados para exportar.', 'error');
+  if (!registosAuditoriaEmMemoria.length) {
+    exibirNotificacaoToast('Sem dados para exportar.', 'error');
     return;
   }
 
-  let csvContent = 'data:text/csv;charset=utf-8,';
-  csvContent += 'Data/Hora,Utilizador,Perfil,Acao,Entidade,Detalhes,IP\n';
+  let conteudoCsv = 'data:text/csv;charset=utf-8,';
+  conteudoCsv += 'Data/Hora,Utilizador,Perfil,Acao,Entidade,Detalhes,IP\n';
 
-  cachedAuditLogs.forEach(l => {
-    const row = [
-      `"${new Date(l.timestamp).toLocaleString('pt-PT')}"`,
-      `"${l.user_name}"`,
-      `"${l.user_role}"`,
-      `"${l.action}"`,
-      `"${l.entity}: ${l.entity_id}"`,
-      `"${l.details.replace(/"/g, '""')}"`,
-      `"${l.ip_address}"`
+  registosAuditoriaEmMemoria.forEach(log => {
+    const linhaCsv = [
+      `"${new Date(log.timestamp).toLocaleString('pt-PT')}"`,
+      `"${log.user_name}"`,
+      `"${log.user_role}"`,
+      `"${log.action}"`,
+      `"${log.entity}: ${log.entity_id}"`,
+      `"${log.details.replace(/"/g, '""')}"`,
+      `"${log.ip_address}"`
     ].join(',');
-    csvContent += row + '\n';
+    conteudoCsv += linhaCsv + '\n';
   });
 
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement('a');
-  link.setAttribute('href', encodedUri);
-  link.setAttribute('download', `SGE_Auditoria_${new Date().toISOString().slice(0, 10)}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  showToast('Ficheiro CSV gerado com sucesso!', 'success');
+  const uriCodificada = encodeURI(conteudoCsv);
+  const elementoDownload = document.createElement('a');
+  elementoDownload.setAttribute('href', uriCodificada);
+  elementoDownload.setAttribute('download', `SGE_Auditoria_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(elementoDownload);
+  elementoDownload.click();
+  document.body.removeChild(elementoDownload);
+  exibirNotificacaoToast('Ficheiro CSV gerado com sucesso!', 'success');
 };
 
+/**
+ * Limpa todos os registos de auditoria acumulados no sistema após confirmação do utilizador.
+ */
 window.clearAuditLogsUI = async function () {
   if (!confirm('Tem a certeza de que deseja eliminar todos os registos de auditoria? Esta ação não pode ser desfeita.')) {
     return;
   }
 
   try {
-    const data = await apiFetch('/api/audit-logs', {
+    const respostaLimpeza = await executarRequisicaoApi('/api/audit-logs', {
       method: 'DELETE'
     });
-    showToast(data.message || 'Registos de auditoria limpos com sucesso.', 'success');
-    loadAuditData();
-  } catch (err) {
-    showToast(err.message || 'Erro ao limpar registos de auditoria.', 'error');
+    exibirNotificacaoToast(respostaLimpeza.message || 'Registos de auditoria limpos com sucesso.', 'success');
+    carregarDadosAuditoria();
+  } catch (erroLimpeza) {
+    exibirNotificacaoToast(erroLimpeza.message || 'Erro ao limpar registos de auditoria.', 'error');
   }
 };
 
+// ==========================================
+// FUNÇÕES UTILITÁRIAS PARA MODAIS
+// ==========================================
 
-// Funções Utilitárias para Modais
-function openModal(id) {
-  document.getElementById(id).classList.add('active');
+/**
+ * Abre um modal na interface adicando a classe 'active'.
+ * 
+ * @param {string} idModal - ID do elemento do modal
+ */
+function abrirModal(idModal) {
+  const elementoModal = document.getElementById(idModal);
+  if (elementoModal) elementoModal.classList.add('active');
 }
 
-window.closeModal = function (id) {
-  document.getElementById(id).classList.remove('active');
+/**
+ * Fecha um modal ativo na interface removendo a classe 'active'.
+ * 
+ * @param {string} idModal - ID do elemento do modal
+ */
+window.closeModal = function (idModal) {
+  const elementoModal = document.getElementById(idModal);
+  if (elementoModal) elementoModal.classList.remove('active');
 };
