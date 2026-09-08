@@ -112,8 +112,6 @@ O sistema já vem pre-populado com 4 contas de teste representando cada um dos p
 SGE-RBAC/
 ├── data/
 │   └── database.json          # Ficheiro de persistência de dados SQLite/JSON
-├── docs/
-│   └── DOCUMENTACAO_TECNICA.md # Documentação Técnica e Académica completa
 ├── public/
 │   ├── css/
 │   │   └── style.css          # Design System Glassmorphism & Responsividade
