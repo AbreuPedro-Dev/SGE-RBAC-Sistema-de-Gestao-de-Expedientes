@@ -13,3 +13,7 @@ Thumbs.db
 # Ficheiros temporários da IDE
 .vscode/
 .idea/
+
+# Documentação local não versionada (fora do Git/GitHub)
+docs/
+*.docx
