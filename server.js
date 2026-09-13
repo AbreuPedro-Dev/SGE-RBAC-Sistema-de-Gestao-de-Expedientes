@@ -356,6 +356,60 @@ aplicacao.post('/api/expedientes/:id/tramitar', authenticateToken, checkPermissi
 
   resposta.json({ success: true, message: 'Expediente tramitado com sucesso.', tramitacao: novaTramitacao });
 });
+/**
+ * POST /api/expedientes/tramitar
+ * Tramita um expediente usando o ID enviado no corpo da requisição.
+ */
+aplicacao.post('/api/expedientes/tramitar', authenticateToken, checkPermission('expediente:tramitar'), (requisicao, resposta) => {
+  const { id, to_department, opinion } = requisicao.body;
+
+  if (!id || !to_department || !opinion) {
+    return resposta.status(400).json({
+      success: false,
+      message: 'Informe o ID do expediente, o departamento de destino e o parecer/instruções.'
+    });
+  }
+
+  const expedienteEncontrado = baseDados.getExpedientById(id);
+
+  if (!expedienteEncontrado) {
+    return resposta.status(404).json({
+      success: false,
+      message: 'Expediente não encontrado.'
+    });
+  }
+
+  if (expedienteEncontrado.status === 'Arquivado') {
+    return resposta.status(400).json({
+      success: false,
+      message: 'Não é possível tramitar um expediente arquivado.'
+    });
+  }
+
+  const novaTramitacao = baseDados.addTramitacao(
+    id,
+    { to_department, opinion },
+    requisicao.user
+  );
+
+  baseDados.addAuditLog({
+    user_id: requisicao.user.id,
+    user_name: requisicao.user.name,
+    user_role: requisicao.user.role_name,
+    action: 'EXPEDIENTE_TRAMITADO',
+    entity: 'Expediente',
+    entity_id: expedienteEncontrado.nup,
+    details: `Tramitado de '${expedienteEncontrado.current_department}' para '${to_department}'. Parecer: ${opinion}`,
+    ip_address: obterIpCliente(requisicao),
+    success: true
+  });
+
+  resposta.json({
+    success: true,
+    message: 'Expediente tramitado com sucesso.',
+    tramitacao: novaTramitacao
+  });
+});
 
 /**
  * @route POST /api/expedientes/:id/despachar
@@ -436,6 +490,19 @@ aplicacao.post('/api/expedientes/:id/arquivar', authenticateToken, checkPermissi
 aplicacao.get('/api/audit-logs', authenticateToken, checkPermission('audit:view'), (requisicao, resposta) => {
   const listaLogs = baseDados.getAuditLogs();
   resposta.json({ success: true, logs: listaLogs });
+});
+
+/**
+ * @route GET /api/auditoria
+ * @description Retorna o histórico de auditoria do sistema.
+ */
+aplicacao.get('/api/auditoria', authenticateToken, checkPermission('audit:view'), (requisicao, resposta) => {
+  const listaLogs = baseDados.getAuditLogs();
+
+  resposta.json({
+    success: true,
+    logs: listaLogs
+  });
 });
 
 /**
