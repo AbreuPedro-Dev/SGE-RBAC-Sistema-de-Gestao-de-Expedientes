@@ -171,6 +171,12 @@ aplicacao.post('/api/users', authenticateToken, checkPermission('users:manage'),
 
   const novoUtilizador = baseDados.createUser({ name, email, password, role_id, department });
 
+  if (!novoUtilizador) {
+    return resposta.status(400).json({
+      success: false,
+      message: 'O perfil informado não existe.'
+    });
+  }
   baseDados.addAuditLog({
     user_id: requisicao.user.id,
     user_name: requisicao.user.name,
@@ -197,7 +203,6 @@ aplicacao.put('/api/users/:id', authenticateToken, checkPermission('users:manage
   if (!utilizadorAtualizado) {
     return resposta.status(404).json({ success: false, message: 'Utilizador não encontrado.' });
   }
-
   baseDados.addAuditLog({
     user_id: requisicao.user.id,
     user_name: requisicao.user.name,

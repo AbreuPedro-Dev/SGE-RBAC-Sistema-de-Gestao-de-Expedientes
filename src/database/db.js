@@ -537,22 +537,35 @@ class Database {
    * @param {Object} dadosUtilizador - Objeto com nome, email, password, role_id, department
    */
   createUser(dadosUtilizador) {
-    const novoId = this.data.users.length ? Math.max(...this.data.users.map(u => u.id)) + 1 : 1;
+    const roleId = Number(dadosUtilizador.role_id);
+
+    // Verifica se o perfil informado existe
+    const perfilExiste = this.data.roles.some(role => role.id === roleId);
+
+    if (!perfilExiste) {
+      return null;
+    }
+
+    const novoId = this.data.users.length
+      ? Math.max(...this.data.users.map(u => u.id)) + 1
+      : 1;
+
     const novoUtilizador = {
       id: novoId,
       name: dadosUtilizador.name,
       email: dadosUtilizador.email,
       password: bcrypt.hashSync(dadosUtilizador.password, 10),
-      role_id: Number(dadosUtilizador.role_id),
+      role_id: roleId,
       department: dadosUtilizador.department || 'Geral',
       active: true,
       created_at: new Date().toISOString()
     };
+
     this.data.users.push(novoUtilizador);
     this.save();
+
     return this.getUserById(novoId);
   }
-
   /**
    * Atualiza os dados de um utilizador existente pelo seu ID.
    * 
